@@ -1,0 +1,4 @@
+North_Terminus  East_Station
+East_Station    North_Terminus South_Busport West_Station
+West_Station    East_Station   South_Busport
+South_Busport   West_Station   East_Station
