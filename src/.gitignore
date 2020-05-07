@@ -1,0 +1,3 @@
+../.mypy_cache/*
+../.vscode
+.mypy_cache

@@ -9,7 +9,7 @@ fi
 
 # ---------------------------------------
 
-MYSERVER="./station"
+MYSERVER="./station.py"
 port="4000"
 
 PATH="/bin:/usr/bin"
