@@ -50,13 +50,11 @@ def open_ports(node_info: dict) -> None:
     while True:
         events = sel.select()
         for key, mask in events:
+            incoming_socket = key.fileobj
             if key.data is None:
                 # Should be a new connection
-                print(key.fileobj.type)
-                print(socket.SOCK_DGRAM)
-                print(socket.SOCK_STREAM)
-                if key.fileobj == udp_socket:
-                    print(f"Receiving UDP data {key.fileobj.recv(1024)}")
+                if incoming_socket == udp_socket:
+                    print(f"Receiving UDP data {incoming_socket.recv(1024)}")
                 else:
                     print("receving TCP connection")
                     accept(key.fileobj, sel)
