@@ -6,24 +6,29 @@ Date: 06/05/2020
 CITS3002 project Python implementation of the required functionality for a
 station.
 
-Code conforming to Pylinter and Mypy.
+Code conforming to Pylinter and Mypy
 """
 import socket
 import sys
 import os
 import selectors
+import signal
 from typing import Any
 from time import time
 from Frame import Frame
+from FrameType import FrameType
+
 
 HOST = "127.0.0.1"
+# Keep the seqnos bounded to 32 bits for our C friends
+MAX_INT = (2 ** 32) - 1
+MAX_PACKET_LEN = 1024
 NAME: str
 TCP_PORT: int
 UDP_PORT: int
-NEIGHBOURS: list = []
+NEIGHBOURS: dict = {}
 TCP_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 UDP_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-SEQNO = 0
 
 
 def main() -> None:
@@ -34,23 +39,20 @@ def main() -> None:
 
 def open_ports() -> None:
     sel = selectors.DefaultSelector()
-
+    seqno = 0
     TCP_SOCKET.bind((HOST, TCP_PORT))
     UDP_SOCKET.bind((HOST, UDP_PORT))
     TCP_SOCKET.listen()
 
     TCP_SOCKET.setblocking(False)
-    UDP_SOCKET.setblocking(False)
+    # UDP_SOCKET.setblocking(False)
 
     sel.register(TCP_SOCKET, selectors.EVENT_READ, None)
     sel.register(UDP_SOCKET, selectors.EVENT_READ, None)
 
-    global SEQNO
-    test_frame = Frame(NAME, "East_Station", SEQNO, NAME, int(time()), 1)
-    SEQNO += 1
-    byte_array = test_frame.to_bytes()
-
-    UDP_SOCKET.sendto(byte_array, (HOST, 3000))
+    # Introduce ourselves to the neighbours
+    send_name_frame(seqno)
+    seqno = (seqno + 1) % MAX_INT
 
     while True:
         events = sel.select()
@@ -59,7 +61,7 @@ def open_ports() -> None:
             if key.data is None:
                 # Should be a new connection
                 if incoming_socket == UDP_SOCKET:
-                    print(f"Receiving UDP data {incoming_socket.recv(1024)}")
+                    process_udp()
                 else:
                     print("receving TCP connection")
                     accept(incoming_socket, sel)
@@ -68,13 +70,31 @@ def open_ports() -> None:
                 service_connection(key, mask, sel)
 
 
+def process_udp() -> None:
+    # Read 4 byte header giving frame length
+    frame = UDP_SOCKET.recvfrom(MAX_PACKET_LEN)
+    origin_port = frame[1][1]
+    frame_str: str = frame[0].decode("utf-8")
+    incoming_frame = Frame()
+    incoming_frame.from_string(frame_str)
+    if incoming_frame.type == FrameType.NAME_FRAME:
+        NEIGHBOURS[origin_port] = incoming_frame.origin
+
+
+def send_name_frame(seqno: int) -> None:
+    name_frame = Frame(NAME, "", seqno, NAME, int(time()),
+                       FrameType.NAME_FRAME)
+    send_bytes = name_frame.to_bytes()
+    for neighbour in NEIGHBOURS.keys():
+        UDP_SOCKET.sendto(send_bytes, ((HOST, neighbour)))
+
+
 def accept(sock: socket.socket, sel: selectors.DefaultSelector) -> None:
     conn, addr = sock.accept()
     print(f"Accepting connection from {addr}")
     conn.setblocking(False)
-    data: list = []
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
-    sel.register(conn, events, data=data)
+    sel.register(conn, events)
 
 
 def service_connection(key: selectors.SelectorKey, mask: int,
@@ -114,10 +134,18 @@ def parse_args() -> None:
     TCP_PORT = int(args.pop(0))
     UDP_PORT = int(args.pop(0))
 
-    # The rest of the arguments should be our neighbours
+    # The rest of the arguments should be our neighbours ports
     while args:
-        NEIGHBOURS.append(int(args.pop(0)))
+        NEIGHBOURS[int(args.pop(0))] = ""
+
+
+def exit_gracefully(sig, frame) -> None:
+    print("Interrupt: closing sockets and exiting gracefully")
+    UDP_SOCKET.close()
+    TCP_SOCKET.close()
+    sys.exit(0)
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, exit_gracefully)
     main()
