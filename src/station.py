@@ -145,6 +145,14 @@ def open_ports() -> None:
                         ack_queue.append(packet)
                     writer.sendto(packet.frame_bytes, (HOST, packet.port))
 
+        for error in errors:
+            # Something has gone wrong, kill the socket
+            input_sockets.remove(error)
+            if error in output_sockets:
+                output_sockets.remove(error)
+            error.close()
+            del sending_queue[error]
+
 
 def process_udp(sending_queue: dict, ack_queue: list,
                 frame_bytes: bytes) -> None:
