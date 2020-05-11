@@ -19,7 +19,6 @@ from time import sleep
 import random
 from Frame import Frame
 from FrameType import FrameType
-from Packet import DisconnectionError
 from Journey import Journey
 
 
@@ -62,7 +61,7 @@ def check_timetable(timetables: dict, last_check: int) -> int:
                     if journey.destination not in timetables.keys():
                         timetables[journey.destination] = []
                     timetables[journey.destination].append(journey)
-    
+
     except FileNotFoundError:
         print(f"{file_name} for node {NAME} not found, exiting")
         sys.exit(0)
@@ -73,7 +72,6 @@ def check_timetable(timetables: dict, last_check: int) -> int:
 def open_ports() -> None:
     seqno = 0
     input_sockets = [TCP_SOCKET, UDP_SOCKET]
-    output_sockets = [TCP_SOCKET, UDP_SOCKET]
     sending_queue = {}
     sending_queue[TCP_SOCKET] = []
     sending_queue[UDP_SOCKET] = []
@@ -91,7 +89,7 @@ def open_ports() -> None:
     last_timetable_check = check_timetable(timetables, last_timetable_check)
 
     # Sleep so that the other servers can bind their ports
-    sleep(2)
+    sleep(5)
 
     # Introduce ourselves to the neighbours
     for neighbour in NEIGHBOURS.keys():
@@ -101,8 +99,7 @@ def open_ports() -> None:
         seqno = (seqno + 1) % MAX_INT
 
     while True:
-        readers, writers, errors = select.select(input_sockets,
-                                                 output_sockets, input_sockets)
+        readers, writers, errors = select.select(input_sockets, [], [])
         for reader in readers:
             if reader == UDP_SOCKET:
                 frame = UDP_SOCKET.recvfrom(MAX_PACKET_LEN)
@@ -114,7 +111,6 @@ def open_ports() -> None:
                 conn.setblocking(False)
                 sending_queue[conn] = []
                 input_sockets.append(conn)
-                output_sockets.append(conn)
 
             else:
                 # Existing TCP sockets
@@ -122,31 +118,11 @@ def open_ports() -> None:
                 if not incoming_bytes:
                     # Disconnection message
                     print(f"Disconnecting from {reader}")
-                    if reader in output_sockets:
-                        output_sockets.remove(reader)
                     input_sockets.remove(reader)
                 else:
                     # They have something to say
                     request_string = incoming_bytes.decode("utf-8")
                     print(request_string)
-
-        for writer in writers:
-            if sending_queue[writer]:
-                out_tup = sending_queue[writer].pop(0)
-                if writer != UDP_SOCKET:
-                    # If its a TCP Socket use send
-                    writer.send(out_tup[0])
-                else:
-                    # It's UDP
-                    writer.sendto(out_tup[0], (HOST, out_tup[1]))
-
-        for error in errors:
-            # Something has gone wrong, kill the socket
-            input_sockets.remove(error)
-            if error in output_sockets:
-                output_sockets.remove(error)
-            error.close()
-            del sending_queue[error]
 
 
 def process_udp(sending_queue: dict, frame_bytes: bytes) -> None:
@@ -159,7 +135,6 @@ def process_udp(sending_queue: dict, frame_bytes: bytes) -> None:
 
     if incoming_frame.type == FrameType.NAME_FRAME:
         NEIGHBOURS[origin_port] = incoming_frame.origin
-        
 
 
 def parse_args() -> None:
