@@ -19,5 +19,9 @@ BusportC,116.1000,-31.8500
 16:00,busC_B,stopC,16:13,JunctionB
 16:34,busC_B,stopC,16:45,JunctionB
 17:07,busC_B,stopC,17:19,JunctionB
+17:43,busC_A,stopC,18:27,TerminalA
+18:19,busC_A,stopC,19:02,TerminalA
+18:52,busC_A,stopC,19:34,TerminalA
+19:27,busC_A,stopC,20:10,TerminalA
 20:01,busC_B,stopC,20:14,JunctionB
 20:36,busC_B,stopC,20:49,JunctionB

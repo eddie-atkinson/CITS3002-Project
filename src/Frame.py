@@ -12,22 +12,34 @@ class Frame:
     dest: str = ""
     src: str = ""
     seqno: int = -1
+    origin_seqno: int = -1
     time: int = -1
     type: FrameType
 
-    def __init__(self, origin="", dest="", seqno=-1, src="", time=-1, type=-1):
+    def __init__(
+        self,
+        origin="",
+        dest="",
+        src="",
+        seqno=-1,
+        origin_seqno=-1,
+        time=-1,
+        type=-1,
+    ):
         self.origin = origin
         self.dest = dest
         self.src = src
         self.seqno = seqno
+        self.origin_seqno = origin_seqno
         self.time = time
         self.type = type
 
     def to_string(self):
-        return(
+        return (
             f"origin:{self.origin},"
             f"dest:{self.dest},"
             f"src:{self.src},"
+            f"origin_seqno:{self.origin_seqno},"
             f"seqno:{self.seqno},"
             f"time:{self.time},"
             f"type:{self.type}"
@@ -39,10 +51,7 @@ class Frame:
         string to bytes and concatenate the length as a 32 bit integer on the
         front
         """
-        string_rep = self.to_string()
-        # Add 1 to length for null byte
-        # length = (len(string_rep)).to_bytes(4, 'little')
-        return(string_rep.encode("utf-8"))
+        return self.to_string().encode("utf-8")
 
     def from_string(self, input: str):
         fields = {}
@@ -55,5 +64,6 @@ class Frame:
         self.dest = fields["dest"]
         self.src = fields["src"]
         self.seqno = int(fields["seqno"])
+        self.origin_seqno = int(fields["origin_seqno"])
         self.time = int(fields["time"])
         self.type = FrameType(int(fields["type"]))
