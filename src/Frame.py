@@ -12,7 +12,6 @@ class Frame:
     dest: str = ""
     src: str = ""
     seqno: int = -1
-    origin_seqno: int = -1
     time: int = -1
     type: FrameType
 
@@ -22,7 +21,6 @@ class Frame:
         dest="",
         src="",
         seqno=-1,
-        origin_seqno=-1,
         time=-1,
         type=-1,
     ):
@@ -30,7 +28,6 @@ class Frame:
         self.dest = dest
         self.src = src
         self.seqno = seqno
-        self.origin_seqno = origin_seqno
         self.time = time
         self.type = type
 
@@ -39,7 +36,6 @@ class Frame:
             f"origin:{self.origin},"
             f"dest:{self.dest},"
             f"src:{self.src},"
-            f"origin_seqno:{self.origin_seqno},"
             f"seqno:{self.seqno},"
             f"time:{self.time},"
             f"type:{self.type}"
@@ -64,6 +60,5 @@ class Frame:
         self.dest = fields["dest"]
         self.src = fields["src"]
         self.seqno = int(fields["seqno"])
-        self.origin_seqno = int(fields["origin_seqno"])
         self.time = int(fields["time"])
         self.type = FrameType(int(fields["type"]))
