@@ -61,6 +61,10 @@ def check_timetable(timetables: dict, last_check: int) -> int:
                         timetables[journey.destination] = []
                     timetables[journey.destination].append(journey)
 
+        # Just in case the timetables were not in chronological order
+        for timetable in timetables.values():
+            timetable.sort(key=lambda x: x.departure_time)
+
     except FileNotFoundError:
         print(f"{file_name} for node {NAME} not found, exiting")
         sys.exit(0)
@@ -71,9 +75,10 @@ def check_timetable(timetables: dict, last_check: int) -> int:
 def open_ports() -> None:
     seqno = 0
     input_sockets = [TCP_SOCKET, UDP_SOCKET]
-    timetables = {}
-    seqno_table = {}
-    outstanding_frames = {}
+    timetables: dict = {}
+    seqno_table: dict = {}
+    outstanding_frames: dict = {}
+    response_sockets: dict = {}
     timetable_check = 0
     TCP_SOCKET.bind((HOST, TCP_PORT))
     UDP_SOCKET.bind((HOST, UDP_PORT))
@@ -92,7 +97,7 @@ def open_ports() -> None:
     # Introduce ourselves to the neighbours
     for neighbour in NEIGHBOURS.keys():
         name_frame = Frame(
-            NAME, "", NAME, -1, int(time.time()), FrameType.NAME_FRAME,
+            NAME, "", NAME, -1, -1, FrameType.NAME_FRAME,
         )
         UDP_SOCKET.sendto(name_frame.to_bytes(), (HOST, neighbour))
 
@@ -117,13 +122,16 @@ def open_ports() -> None:
                         timetables, timetable_check
                     )
                     process_request_frame(
-                        frame,
-                        seqno_table,
-                        timetables,
-                        outstanding_frames,
+                        frame, seqno_table, timetables, outstanding_frames,
                     )
                 else:
-                    process_response(frame, outstanding_frames)
+                    process_response(
+                        frame,
+                        outstanding_frames,
+                        response_sockets,
+                        input_sockets,
+                        timetables,
+                    )
 
                 # Update our seqno table
                 if (
@@ -150,7 +158,21 @@ def open_ports() -> None:
                     request_string = incoming_bytes.decode("utf-8")
                     destination = re.search(r"to=\w+", request_string)
                     if not destination:
-                        raise IOError("Didn't receive actual destination")
+                        response = (
+                            f"HTTP/1.1 400 Bad Request\n"
+                            + f"Content-Type: text/html\n"
+                            + f"Connection: Closed\n"
+                            + f"\n"
+                            + f"<html><body>Bad request"
+                            + f"</body></html>"
+                        ).encode("utf-8")
+                        reader.send(response)
+                        # Stop listening for socket and close
+                        input_sockets.remove(reader)
+                        reader.shutdown(socket.SHUT_RD)
+                        reader.close()
+                        continue
+
                     destination: str = destination.group(0)
                     destination = destination.split("=")[-1]
 
@@ -159,13 +181,26 @@ def open_ports() -> None:
                     request_frame = Frame(
                         NAME, destination, NAME, seqno, -1, FrameType.REQUEST,
                     )
+                    seqno_table[NAME] = seqno
                     send_frame_to_neighbours(
                         request_frame, timetables, outstanding_frames
                     )
+                    response_sockets[seqno] = reader
                     seqno = (seqno + 1) % MAX_INT
 
 
-def process_response(frame: Frame, outstanding_frames: dict) -> None:
+def normalise_time(time_struct: time.struct_time) -> time.struct_time:
+    string_rep = f"{time_struct[3]}:{time_struct[4]}"
+    return time.strptime(string_rep, "%H:%M")
+
+
+def process_response(
+    frame: Frame,
+    outstanding_frames: dict,
+    response_sockets: dict,
+    input_sockets: list,
+    timetables: dict,
+) -> None:
     print(
         f"{NAME} Received response frame {frame.to_string()}\nfrom {frame.src}\n"
     )
@@ -180,9 +215,12 @@ def process_response(frame: Frame, outstanding_frames: dict) -> None:
         response.remaining_responses -= 1
         if response.time == -1 and frame.time > -1:
             # If we have found a route, select it
+            response.stop = frame.src
             response.time = frame.time
-        if frame.time < response.time and frame.time > 0:
+
+        elif frame.time < response.time and frame.time > 0:
             # We've found a faster route
+            response.stop = frame.src
             response.time = frame.time
 
         if response.remaining_responses == 0:
@@ -190,14 +228,43 @@ def process_response(frame: Frame, outstanding_frames: dict) -> None:
             if response.frame.origin == NAME:
                 # End of the line send the TCP response
                 print("We are at the end of the line friends")
+
+                out_sock = response_sockets[frame.seqno]
+                tt = timetables[response.stop]
+                next_journey = tt[0]
+                current_time = time.localtime(int(time.time()))
+                current_time_obj = normalise_time(current_time)
+                for journey in tt:
+                    if journey.departure_time > current_time_obj:
+                        next_journey = journey
+                        break
+
+                response = (
+                    f"HTTP/1.1 200 OK\n"
+                    + f"Content-Type: text/html\n"
+                    + f"Connection: Closed\n"
+                    + f"\n"
+                    + f"<html><body>Arrival time at dest: "
+                    + f"{time.strftime('%c', time.localtime(response.time))}"
+                    + f"<br>Trip Detail: "
+                    + f"{next_journey.string_rep}"
+                    + f"</body></html>"
+                ).encode("utf-8")
+                out_sock.send(response)
+                # Stop listening for socket and close
+                input_sockets.remove(out_sock)
+                out_sock.shutdown(socket.SHUT_RD)
+                out_sock.close()
+
             else:
                 # Send UDP response to requesting station
+                print(f"{NAME} sending response frame to {frame.dest }")
                 response_frame = Frame(
                     frame.origin,
                     frame.dest,
                     NAME,
                     frame.seqno,
-                    frame.time,
+                    response.time,
                     frame.type,
                 )
                 out_port = None
@@ -222,6 +289,10 @@ def send_frame_to_neighbours(
     out_frame: Frame, timetables: dict, outstanding_frames: dict
 ) -> None:
     orig_src = out_frame.src
+    sent_frames = 0
+    out_frame.src = NAME
+    frame_time = out_frame.time
+
     for port, name in NEIGHBOURS.items():
         if out_frame.src == name or out_frame.origin == name:
             # Don't forward frames to senders
@@ -235,53 +306,57 @@ def send_frame_to_neighbours(
                 f"skipping sending a frame to them"
             )
             continue
-        out_frame.src = NAME
-        out_frame.time = calc_arrival_time(neighbour_tt)
+
+        if out_frame.origin != NAME:
+            # This isn't our frame
+            start_time = frame_time
+        else:
+            start_time = int(time.time())
+
+        out_frame.time = calc_arrival_time(neighbour_tt, start_time)
         UDP_SOCKET.sendto(out_frame.to_bytes(), (HOST, port))
+        sent_frames += 1
 
     out_frame.src = orig_src
     if out_frame.origin not in outstanding_frames.keys():
         outstanding_frames[out_frame.origin] = []
 
+    resp = Response(sent_frames, out_frame, -1, "Nowhere")
+
     if out_frame.origin == NAME:
-        # This is our request
-        outstanding_frames[NAME].append(
-            Response(len(NEIGHBOURS), out_frame, -1)
-        )
+        outstanding_frames[NAME].append(resp)
     else:
-        # We are forwarding a request
-        outstanding_frames[out_frame.origin].append(
-            Response(len(NEIGHBOURS) - 1, out_frame, -1)
-        )
+        outstanding_frames[out_frame.origin].append(resp)
 
 
-def calc_arrival_time(timetable: list) -> int:
-    current_time = int(time.time())
-    current_local_time = time.localtime(current_time)
-    string_rep = f"{current_local_time[3]}:{current_local_time[4]}"
-    current_time_obj = time.strptime(string_rep, "%H:%M")
+def calc_arrival_time(timetable: list, start_time) -> int:
+    local_time = time.localtime(start_time)
+    time_obj = normalise_time(local_time)
     # In case there isn't another journey till tomorrow
     next_journey = timetable[0]
     for journey in timetable:
-        if journey.departure_time > current_time_obj:
+        if journey.departure_time > time_obj:
             next_journey = journey
             break
     delta = int(
-        time.mktime(next_journey.arrival_time) - time.mktime(current_time_obj)
+        time.mktime(next_journey.arrival_time) - time.mktime(time_obj)
     )
     if delta < 0:
         # Next journey is tomorrow
-        arrival_time = current_time + (SECONDS_IN_DAY + delta)
+        arrival_time = start_time + (SECONDS_IN_DAY + delta)
     else:
-        arrival_time = current_time + delta
-
+        arrival_time = start_time + delta
+    print(f"{NAME} Next journey is {next_journey}, arrival time is calculated to be {time.localtime(arrival_time)}")
     return arrival_time
 
 
 def seen_before(origin: str, seqno: int, seqno_table: dict) -> bool:
     if origin not in seqno_table.keys():
         return False
-    elif (seqno % MAX_INT) >= (seqno_table[origin] % MAX_INT):
+    # In case int has rolled over
+    elif seqno == 0 and seqno_table[origin] == MAX_INT:
+        return False
+    elif seqno > seqno_table[origin]:
         return False
     else:
         return True
@@ -300,7 +375,7 @@ def process_request_frame(
     for port, name in NEIGHBOURS.items():
         if name == in_frame.src:
             origin_port = port
-    
+
     if not origin_port:
         print(f"Couldn't find the port number of neighbour {in_frame.src}")
         sys.exit(0)
@@ -313,7 +388,7 @@ def process_request_frame(
             NAME,
             in_frame.seqno,
             in_frame.time,
-            FrameType.RESPONSE
+            FrameType.RESPONSE,
         )
         print(f"{NAME} received request for itself, responding")
         UDP_SOCKET.sendto(response_frame.to_bytes(), (HOST, origin_port))
@@ -329,21 +404,22 @@ def process_request_frame(
                 NAME,
                 in_frame.seqno,
                 -1,
-                FrameType.RESPONSE
+                FrameType.RESPONSE,
             )
-            UDP_SOCKET.sendto(response_frame.to_bytes(), (HOST, origin_port))
+            UDP_SOCKET.sendto(response_frame.to_bytes(), (HOST, origin_port))                                                                                                                                            
         seqno_table[in_frame.origin] = in_frame.seqno
 
     else:
         response_frame = Frame(
             in_frame.dest,
-            in_frame.src,
+            in_frame.origin,
             NAME,
             in_frame.seqno,
             -1,
-            FrameType.RESPONSE
+            FrameType.RESPONSE,
         )
         print(f"{NAME} dropping frame {in_frame.to_string()}")
+        UDP_SOCKET.sendto(response_frame.to_bytes(), (HOST, origin_port))
 
 
 def parse_args() -> None:
@@ -374,12 +450,4 @@ def exit_gracefully(sig, frame) -> None:
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, exit_gracefully)
-    try:
-        main()
-    except OSError:
-        print(
-            "\033[93m"
-            + f"Warning: Port already in use for {NAME}, exiting gracefully"
-            + "\033[0m"
-        )
-        sys.exit(0)
+    main()

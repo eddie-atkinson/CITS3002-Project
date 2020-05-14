@@ -14,8 +14,8 @@ class Journey:
         departure_time: str,
         arrival_time: str,
     ):
-
-        self.string_rep = string_rep
+        # Add spaces between the commas to make the str rep nicer
+        self.string_rep = ", ".join(string_rep.split(","))
         self.destination = destination
         if departure_time:
             self.departure_time = time.strptime(departure_time, "%H:%M")
