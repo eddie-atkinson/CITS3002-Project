@@ -15,6 +15,7 @@ import select
 import signal
 import time
 from typing import Any
+from typing import Tuple
 from time import sleep
 import regex as re
 from Frame import Frame
@@ -25,51 +26,89 @@ from constants import MAX_INT
 from constants import HOST
 from constants import MAX_PACKET_LEN
 from Response import Response
+from udp import process_udp
+from tcp import process_tcp
+from Node import Node
 
 # TODO: Take almost all variables out of global scope
-NAME: str
-TCP_PORT: int
-UDP_PORT: int
-NEIGHBOURS: dict = {}
+# NAME: str
+# TCP_PORT: int
+# UDP_PORT: int
+# NEIGHBOURS: dict = {}
 TCP_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 UDP_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
 def main() -> None:
-    parse_args()
-    print(f"Node: {NAME} running with PID {os.getpid()}")
-    open_ports()
+    this_node = parse_args()
+    print(f"Node: {this_node.name} running with PID {os.getpid()}")
+    init_ports(this_node)
+    send_name_frames(this_node)
+    listen_on_ports(this_node)
+    # open_ports()
 
 
-def check_timetable(timetables: dict, last_check: int) -> int:
-    file_name = f"tt-{NAME}"
-    try:
-        stat_info = os.stat(file_name)
-        if stat_info.st_mtime > last_check:
-            last_check = int(time.time())
-            # Clear all the old entries
-            timetables.clear()
+def init_ports(this_node: Node) -> None:
 
-            with open(file_name, "r") as in_file:
-                # We are not interested in the header info
-                lines = in_file.readlines()[1:]
-                for line in lines:
-                    line = line.strip("\n")
-                    info = line.split(",")
-                    journey = Journey(line, info[-1], info[0], info[-2])
-                    if journey.destination not in timetables.keys():
-                        timetables[journey.destination] = []
-                    timetables[journey.destination].append(journey)
+    tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_socket.bind((HOST, this_node.tcp_port))
+    # Restrict ourselves to a single client for now
+    tcp_socket.listen(1)
+    tcp_socket.setblocking(False)
 
-        # Just in case the timetables were not in chronological order
-        for timetable in timetables.values():
-            timetable.sort(key=lambda x: x.departure_time)
+    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket.bind((HOST, this_node.udp_port))
+    udp_socket.setblocking(False)
 
-    except FileNotFoundError:
-        print(f"{file_name} for node {NAME} not found, exiting")
-        sys.exit(0)
+    # Wait for everyone else to bind their ports
+    sleep(5)
 
-    return last_check
+    this_node.tcp_socket = tcp_socket
+    this_node.udp_socket = udp_socket
+    print("You can send frames now")
+
+
+
+def send_name_frames(this_node: Node) -> None:
+    name_frame = Frame(
+        this_node.name,
+        "",
+        [this_node.name],
+        -1,
+        -1,
+        FrameType.NAME_FRAME
+    )
+    for port in this_node.neighbours.keys():
+        this_node.udp_socket.sendto(name_frame.to_bytes(), (HOST, port))
+
+
+def listen_on_ports(this_node: Node) -> None:
+
+    this_node.input_sockets = [this_node.tcp_socket, this_node.udp_socket]
+    while True:
+        readers = select.select(this_node.input_sockets, [], [])[0]
+        for reader in readers:
+            if reader is this_node.udp_socket:
+                # Do something
+                transmission = reader.recvfrom(MAX_PACKET_LEN)
+                process_udp(this_node, transmission)
+            elif reader is this_node.tcp_socket:
+                #  We have a new tcp connection
+                conn, addr = reader.accept()
+                print(f"New connection from {addr}")
+                conn.setblocking(False)
+                this_node.input_sockets.append(conn)
+            else:
+                transmission = reader.recv(MAX_PACKET_LEN)
+                if not transmission:
+                    # Disconnection
+                    print(f"{reader} has disconnected")
+                    this_node.input_sockets.remove(reader)
+                    reader.shutdown(socket.SHUT_RD)
+                    reader.close()
+                else:
+                    process_tcp(this_node, transmission, reader)
+
 
 
 def open_ports() -> None:
@@ -178,11 +217,6 @@ def open_ports() -> None:
                     seqno = (seqno + 1) % MAX_INT
 
 
-def normalise_time(time_struct: time.struct_time) -> time.struct_time:
-    string_rep = f"{time_struct[3]}:{time_struct[4]}"
-    return time.strptime(string_rep, "%H:%M")
-
-
 def list_equals(lst1: list, lst2: list) -> bool:
     if len(lst1) != len(lst2):
         return False
@@ -192,229 +226,27 @@ def list_equals(lst1: list, lst2: list) -> bool:
     return True
 
 
-def process_response(
-    frame: Frame,
-    outstanding_frames: list,
-    response_sockets: dict,
-    input_sockets: list,
-    timetables: dict,
-) -> None:
-    print(
-        f"{NAME} Received response frame {frame.to_string()}\nfrom {frame.src[-1]}\n"
-    )
-    # Remove our information from the frame's src
-    frame_src = frame.src.pop(-1)
-    for resp in outstanding_frames:
-        if (
-            resp.frame.seqno == frame.seqno
-            and resp.frame.origin == frame.dest
-            and list_equals(frame.src, resp.frame.src)
-        ):
-            response = resp
-
-    response.remaining_responses -= 1
-    if response.time == -1 and frame.time > -1:
-        # If we have found a route, select it
-        response.stop = frame_src
-        response.time = frame.time
-
-    elif frame.time < response.time and frame.time > 0:
-        # We've found a faster route
-        response.stop = frame_src
-        response.time = frame.time
-
-    if response.remaining_responses == 0:
-        # We've received all the responses we expect
-        if response.frame.origin == NAME:
-            # End of the line send the TCP response
-            print("We are at the end of the line friends")
-
-            out_sock = response_sockets[frame.seqno]
-            tt = timetables[response.stop]
-            next_journey = tt[0]
-            current_time = time.localtime(int(time.time()))
-            current_time_obj = normalise_time(current_time)
-            for journey in tt:
-                if journey.departure_time > current_time_obj:
-                    next_journey = journey
-                    break
-
-            http_response = (
-                f"HTTP/1.1 200 OK\n"
-                + f"Content-Type: text/html\n"
-                + f"Connection: Closed\n"
-                + f"\n"
-                + f"<html><body>Arrival time at dest: "
-                + f"{time.strftime('%c', time.localtime(response.time))}"
-                + f"<br>Trip Detail: "
-                + f"{next_journey.string_rep}"
-                + f"</body></html>"
-            ).encode("utf-8")
-            out_sock.send(http_response)
-            # Stop listening for socket and close
-            input_sockets.remove(out_sock)
-            out_sock.shutdown(socket.SHUT_RD)
-            out_sock.close()
-
-        else:
-            # Send UDP response to requesting station
-            print(f"{NAME} sending response frame to {frame.dest }")
-            response_frame = Frame(
-                frame.origin,
-                frame.dest,
-                response.frame.src,
-                frame.seqno,
-                response.time,
-                frame.type,
-            )
-            out_port = None
-            for port, name in NEIGHBOURS.items():
-                if name == response.frame.src[-1]:
-                    out_port = port
-                    break
-            if not out_port:
-                print(
-                    f"Received frame from {response.frame.src[-1]},"
-                    f" not a neighbour, exiting."
-                )
-                sys.exit(0)
-            UDP_SOCKET.sendto(response_frame.to_bytes(), (HOST, out_port))
-        outstanding_frames.remove(response)
-
-
-def send_frame_to_neighbours(
-    out_frame: Frame, timetables: dict, outstanding_frames: list
-) -> None:
-    sent_frames = 0
-    orig_time = out_frame.time
-    out_frame.src.append(NAME)
-    for port, name in NEIGHBOURS.items():
-        if name in out_frame.src or out_frame.origin == name:
-            # Don't forward frames to people who've seen frame before
-            print(f"{NAME} skipping sending a frame to {name}")
-            continue
-        try:
-            neighbour_tt = timetables[name]
-        except KeyError:
-            print(
-                f"Couldn't find {name} in neighbours,"
-                f"skipping sending a frame to them"
-            )
-            continue
-
-        if out_frame.origin != NAME:
-            # This isn't our frame
-            start_time = orig_time
-        else:
-            start_time = int(time.time())
-
-        out_frame.time = calc_arrival_time(neighbour_tt, start_time)
-        UDP_SOCKET.sendto(out_frame.to_bytes(), (HOST, port))
-        sent_frames += 1
-
-    out_frame.time = orig_time
-
-    resp = Response(sent_frames, out_frame, -1, "Nowhere")
-    outstanding_frames.append(resp)
-
-
-def calc_arrival_time(timetable: list, start_time) -> int:
-    local_time = time.localtime(start_time)
-    time_obj = normalise_time(local_time)
-    # In case there isn't another journey till tomorrow
-    next_journey = timetable[0]
-    for journey in timetable:
-        if journey.departure_time > time_obj:
-            next_journey = journey
-            break
-    delta = int(
-        time.mktime(next_journey.arrival_time) - time.mktime(time_obj)
-    )
-    if delta < 0:
-        # Next journey is tomorrow
-        arrival_time = start_time + (SECONDS_IN_DAY + delta)
-    else:
-        arrival_time = start_time + delta
-
-    return arrival_time
-
-
-def process_request_frame(
-    in_frame: Frame,
-    timetables: dict,
-    frames_outstanding: list,
-) -> None:
-    print(
-        f"{NAME} received request frame {in_frame.to_string()}\nfrom {in_frame.src[-1]}"
-    )
-    origin_port = None
-    for port, name in NEIGHBOURS.items():
-        if name == in_frame.src[-1]:
-            origin_port = port
-
-    if not origin_port:
-        print(f"Couldn't find the port number of neighbour {in_frame.src[-1]}")
-        sys.exit(0)
-    in_frame.src.append(NAME)
-    if in_frame.dest == NAME:
-        # You've got mail!
-        response_frame = Frame(
-            NAME,
-            in_frame.origin,
-            in_frame.src,
-            in_frame.seqno,
-            in_frame.time,
-            FrameType.RESPONSE,
-        )
-        print(f"{NAME} received request for itself, responding")
-        UDP_SOCKET.sendto(response_frame.to_bytes(), (HOST, origin_port))
-    elif (NAME not in in_frame.src):
-        # Only forward the frame if we haven't seen it before
-        if len(NEIGHBOURS) > 1:
-            send_frame_to_neighbours(in_frame, timetables, frames_outstanding)
-        else:
-            # We have no other neighbours, respond immediately
-            response_frame = Frame(
-                in_frame.dest,
-                in_frame.origin,
-                in_frame.src,
-                in_frame.seqno,
-                -1,
-                FrameType.RESPONSE,
-            )
-            UDP_SOCKET.sendto(response_frame.to_bytes(), (HOST, origin_port))
-
-    else:
-        response_frame = Frame(
-            in_frame.dest,
-            in_frame.origin,
-            in_frame.src,
-            in_frame.seqno,
-            -1,
-            FrameType.RESPONSE,
-        )
-        print(f"{NAME} dropping frame {in_frame.to_string()}")
-        UDP_SOCKET.sendto(response_frame.to_bytes(), (HOST, origin_port))
-
-
-def parse_args() -> None:
+def parse_args() -> Node:
     args = list(sys.argv)
     # Don't really care about the program name
     args.pop(0)
-    # Now to the real arguments
-    global NAME
-    global TCP_PORT
-    global UDP_PORT
-    global NEIGHBOURS
 
-    NAME = args.pop(0)
-    TCP_PORT = int(args.pop(0))
-    UDP_PORT = int(args.pop(0))
+    name = args.pop(0)
+    tcp_port = int(args.pop(0))
+    udp_port = int(args.pop(0))
 
+    neighbours = {}
     # The rest of the arguments should be our neighbours ports
     while args:
-        NEIGHBOURS[int(args.pop(0))] = ""
+        neighbours[int(args.pop(0))] = ""
 
+    this_node = Node(
+        name,
+        neighbours,
+        tcp_port,
+        udp_port
+    )
+    return this_node
 
 def exit_gracefully(sig, frame) -> None:
     print("Interrupt: closing sockets and exiting gracefully")

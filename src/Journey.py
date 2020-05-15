@@ -1,11 +1,10 @@
 import time
 
-
 class Journey:
     string_rep: str
     destination: str
     departure_time: time.struct_time
-    arrival_time: time.struct_time
+    duration_in_secs: int
 
     def __init__(
         self,
@@ -20,12 +19,15 @@ class Journey:
         if departure_time:
             self.departure_time = time.strptime(departure_time, "%H:%M")
         if arrival_time:
-            self.arrival_time = time.strptime(arrival_time, "%H:%M")
+            arrival_time_obj = time.strptime(arrival_time, "%H:%M")
+        self.duration_in_secs = int(
+            time.mktime(arrival_time_obj) - time.mktime(self.departure_time)
+        )
 
     def __str__(self):
         return (
             f"String rep: {self.string_rep}"
             f"\nDestination: {self.destination}"
             f"\nDeparture Time: {time.strftime('%H:%M', self.departure_time)}"
-            f"\nArrival Time: {time.strftime('%H:%M', self.arrival_time)}"
+            f"\nDuration in secs: {self.duration_in_secs}"
         )
