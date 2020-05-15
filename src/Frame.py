@@ -10,7 +10,7 @@ from FrameType import FrameType
 class Frame:
     origin: str = ""
     dest: str = ""
-    src: str = ""
+    src: list
     seqno: int = -1
     time: int = -1
     type: FrameType
@@ -19,7 +19,7 @@ class Frame:
         self,
         origin="",
         dest="",
-        src="",
+        src=[],
         seqno=-1,
         time=-1,
         type=-1,
@@ -35,7 +35,7 @@ class Frame:
         return (
             f"origin:{self.origin},"
             f"dest:{self.dest},"
-            f"src:{self.src},"
+            f"src:{'.'.join(self.src)},"
             f"seqno:{self.seqno},"
             f"time:{self.time},"
             f"type:{self.type}"
@@ -58,7 +58,7 @@ class Frame:
 
         self.origin = fields["origin"]
         self.dest = fields["dest"]
-        self.src = fields["src"]
+        self.src = fields["src"].split(".")
         self.seqno = int(fields["seqno"])
         self.time = int(fields["time"])
         self.type = FrameType(int(fields["type"]))
