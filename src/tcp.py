@@ -1,5 +1,5 @@
 import socket
-import regex as re
+import re
 from Node import Node
 from FrameType import FrameType
 from util import http_string
@@ -33,10 +33,9 @@ def process_tcp(
 			time=-1,
 			type=FrameType.REQUEST
 		)
+		this_node.response_sockets[this_node.seqno] = sock
 		this_node.seqno = (this_node.seqno +1) % MAX_INT
 		check_timetable(this_node)
 		send_frame_to_neighbours(this_node, request_frame)
-		
-
 
 

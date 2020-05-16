@@ -217,13 +217,13 @@ def open_ports() -> None:
                     seqno = (seqno + 1) % MAX_INT
 
 
-def list_equals(lst1: list, lst2: list) -> bool:
-    if len(lst1) != len(lst2):
-        return False
-    for i in range(len(lst1)):
-        if lst1[i] != lst2[i]:
-            return False
-    return True
+# def list_equals(lst1: list, lst2: list) -> bool:
+#     if len(lst1) != len(lst2):
+#         return False
+#     for i in range(len(lst1)):
+#         if lst1[i] != lst2[i]:
+#             return False
+#     return True
 
 
 def parse_args() -> Node:

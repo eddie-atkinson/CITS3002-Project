@@ -1,15 +1,19 @@
 import time
+import socket
 from FrameType import FrameType
 from Node import Node
 from Frame import Frame
 from timetable import calc_arrival_time
 from timetable import check_timetable
+from timetable import find_next_trip
 from Journey import Journey
 from constants import SECONDS_IN_DAY
 from constants import HOST
 from util import get_port_from_name
+from util import http_string
 from Response import Response
-
+from FrameType import FrameType
+import sys
 
 def process_udp(
     this_node: Node,
@@ -54,8 +58,8 @@ def send_frame_to_neighbours(
     if sent_frames == 0:
         # Everyone around us has seen this frame
         response_frame = Frame(
-            dest=out_frame.dest,
-            origin=out_frame.origin,
+            origin=out_frame.dest,
+            dest=out_frame.origin,
             src=out_frame.src,
             seqno=out_frame.seqno,
             time=-1,
@@ -125,13 +129,73 @@ def process_response_frame(
      this_node: Node,
      in_frame: Frame
  ) -> None:
-    # unpeel the last node in the src and store it as the next node in the journey
-    # compare the seqno, origin and src chain for the frame to see which response object it belongs to
-    # compare the time to the stored time and see if it needs changing, if so change the recorded node to be the unpeeled node
-    # decrement the appropriate count variable and if the count variable is 0 check the node before you on the src chain and send the response to them
-    
     print(
         f"{this_node.name} received response {in_frame.to_string()} from"
         f"{in_frame.src[-1]}"
     )
-    return
+    # unpeel the last node in the src and store it as the next node in the journey
+    # compare the seqno, origin and src chain for the frame to see which response object it belongs to
+    # compare the time to the stored time and see if it needs changing, if so change the recorded node to be the unpeeled node
+    # decrement the appropriate count variable and if the count variable is 0 check the node before you on the src chain and send the response to them
+    src_node = in_frame.src.pop(-1)
+    response_obj = None
+    for resp in this_node.outstanding_frames:
+        if (
+            resp.frame.dest == in_frame.origin 
+            and resp.frame.seqno == in_frame.seqno
+            and resp.frame.src == in_frame.src
+        ):
+            response_obj = resp
+            break
+    
+    if response_obj is None:
+        print(
+            f"{this_node.name} couldn't find response for frame " 
+            f"{in_frame.to_string()}"
+        )
+        sys.exit(0)
+
+    if response_obj.time == -1 and in_frame.time > 0:
+        # Anything is faster than not getting there at all
+        response_obj.stop = src_node
+        response_obj.time = in_frame.time
+    elif in_frame.time < response_obj.time and in_frame.time > 0:
+        # We've found a faster route
+        response_obj.stop = src_node
+        response_obj.time = in_frame.time
+
+    response_obj.remaining_responses -= 1
+    if response_obj.remaining_responses == 0:
+        if in_frame.dest == this_node.name:
+            print(f"End of the line, let's respond to the TCP socket")
+            timetable = this_node.timetables[response_obj.stop]
+            next_journey = find_next_trip(timetable, int(time.time()))
+            arrival_timestamp = time.strftime(
+                "%c", time.localtime(response_obj.time)
+            )
+            http_lines = [
+                f"Arrival time at destination: {arrival_timestamp}",
+                f"Next leg of trip: {next_journey.string_rep}"
+            ]
+            http_response = http_string(200, "OK", http_lines)
+            out_socket = this_node.response_sockets[response_obj.frame.seqno]
+            out_socket.send(http_response.encode("utf-8"))
+            this_node.input_sockets.remove(out_socket)
+            out_socket.shutdown(socket.SHUT_RD)
+            out_socket.close()
+            
+        else:
+            response_frame = Frame(
+                origin=response_obj.frame.dest,
+                dest=response_obj.frame.origin,
+                src=in_frame.src,
+                seqno=response_obj.frame.seqno,
+                time=response_obj.frame.time,
+                type=FrameType.RESPONSE
+            )    
+            out_port = get_port_from_name(this_node, in_frame.src[-2])
+            this_node.udp_socket.sendto(
+                response_frame.to_bytes(), 
+                (HOST, out_port)
+            )
+        this_node.outstanding_frames.remove(response_obj)
