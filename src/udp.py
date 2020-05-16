@@ -190,7 +190,7 @@ def process_response_frame(
                 dest=response_obj.frame.origin,
                 src=in_frame.src,
                 seqno=response_obj.frame.seqno,
-                time=response_obj.frame.time,
+                time=response_obj.time,
                 type=FrameType.RESPONSE
             )    
             out_port = get_port_from_name(this_node, in_frame.src[-2])
@@ -198,4 +198,5 @@ def process_response_frame(
                 response_frame.to_bytes(), 
                 (HOST, out_port)
             )
+            print(f"{this_node.name} responding to {in_frame.src[-2]} with {response_frame.to_string()}")
         this_node.outstanding_frames.remove(response_obj)

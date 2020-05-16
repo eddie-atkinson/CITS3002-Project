@@ -39,6 +39,7 @@ def check_timetable(this_node: Node) -> None:
     try:
         stat_info = os.stat(file_name)
         if stat_info.st_mtime > this_node.last_timetable_check:
+            print(f"{this_node.name} Refreshing timetable")
             last_check = int(time.time())
             # Clear all the old entries
             this_node.timetables.clear()

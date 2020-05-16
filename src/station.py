@@ -43,8 +43,7 @@ def init_ports(this_node: Node) -> None:
 
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_socket.bind((HOST, this_node.tcp_port))
-    # Restrict ourselves to a single client for now
-    tcp_socket.listen(1)
+    tcp_socket.listen(5)
     tcp_socket.setblocking(False)
 
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -124,9 +123,7 @@ def parse_args() -> Node:
     return this_node
 
 def exit_gracefully(sig, frame) -> None:
-    print("Interrupt: closing sockets and exiting gracefully")
-    UDP_SOCKET.close()
-    TCP_SOCKET.close()
+    print("Interrupt: exiting gracefully")
     sys.exit(0)
 
 

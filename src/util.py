@@ -6,7 +6,7 @@ def http_string(
 	messages: list
 ) -> str:
 	response = (
-		f"HTTP/1.1 {response_code} {response_msg}\n"
+		f"HTTP/1.0 {response_code} {response_msg}\n"
 		+ f"Content-Type: text/html\n"
 		+ f"Connection: Closed\n"
 		+ f"\n"

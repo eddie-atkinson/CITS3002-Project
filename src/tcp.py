@@ -7,6 +7,7 @@ from Frame import Frame
 from constants import MAX_INT
 from udp import send_frame_to_neighbours
 from timetable import check_timetable
+from time import sleep
 
 
 def process_tcp(
