@@ -84,9 +84,12 @@ void init_ports(Node& this_node) {
   std::cout << "You can send frames now" << std::endl;
 }
 
+
+
 void send_name_frames(Node& this_node) {
   return;
 }
+
 void handle_sockets(Node& this_node, fd_set* rfds) {
   char buf[MAX_PACKET_LEN];
   size_t len = MAX_PACKET_LEN;
@@ -97,7 +100,7 @@ void handle_sockets(Node& this_node, fd_set* rfds) {
     // We have UDP
     size_t read = recvfrom(this_node.udp_socket, &buf, len, 0, &from, &fromlen);
     std::string frame(buf, read);
-    std::cout << "Frame received: " << frame << std::endl;
+    handle_udp(this_node, frame);
   } 
 
   if(FD_ISSET(this_node.tcp_socket, rfds)) {
@@ -145,7 +148,6 @@ int main(int argc, char *argv[]) {
     std::cout << "Server needs arguments to work" << std::endl;
     exit(1);
   }
-
   Node this_node = parse_args(argc, argv);
   std::cout << "Node: "
             << this_node.name

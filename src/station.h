@@ -13,8 +13,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include "udp.h"
+#include "tcp.h"
 #include "node.h"
 #include "util.h"
+#include "frame.h"
+#include "frametype.h"
 #define MAX_INT 4294967295 // 2^32 - 1
 #define MAX_PACKET_LEN 1024
 #define HOST "127.0.0.1"

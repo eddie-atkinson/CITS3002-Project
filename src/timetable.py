@@ -5,35 +5,6 @@ from Journey import Journey
 from Node import Node
 from constants import SECONDS_IN_DAY
 
-# def check_timetable(this_node: Node) -> None:
-# 	file_name = f"tt-{this_node.name}"
-# 	try:
-# 		stat_info = os.stat(file_name)
-# 		if stat_info.st_mtime > this_node.last_timetable_check:
-# 			this_node.last_timetable_check = int(time.time())
-# 			this_node.timetables.clear()
-
-# 			with open(file_name, "r") as in_file:
-# 				lines = in_file.readlines()[1:]
-# 				for line in lines:
-# 					line = line.strip("\n")
-# 					info = line.split(",")
-# 					journey = Journey(
-# 						line,
-# 						line[-1],
-# 						line[0],
-# 						line[-2]
-# 					)
-# 					if journey.destination not in this_node.timetables.keys():
-# 						this_node.timetables[journey.destination] = []
-
-# 					this_node.timetables[journey.destination].append(journey)
-# 					for timetable in this_node.timetables.values():
-# 						timetable.sort(key=lambda x: x.departure_time)
-# 	except FileNotFoundError:
-# 		print(f"{file_name} for node {this_node.name} not found, exiting")
-# 		sys.exit(0)
-
 def check_timetable(this_node: Node) -> None:
     file_name = f"tt-{this_node.name}"
     try:
