@@ -2,8 +2,16 @@
 #define UDP_H
 #include <iostream>
 #include <string>
+#include <list>
+#include <sstream>
 #include "node.h"
-void handle_udp(Node& this_node, std::string& transmission);
+#include "frame.h"
+#include "frametype.h"
+using std::string;
+using std::endl;
+using std::list;
+using std::cout;
+void handle_udp(Node& this_node, std::string& transmission, uint16_t port);
 #endif
 
 

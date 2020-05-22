@@ -15,18 +15,17 @@ Node parse_args(int argc, char* argv[]) {
 
 void init_ports(Node& this_node) {
   struct sockaddr_in tcpaddr, udpaddr;
-  uint32_t host = 0;
 
   this_node.tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
   if(this_node.tcp_socket < 0) {
-    std::cout << "Failed to allocate TCP socket, exiting" << std::endl;
+    cout << "Failed to allocate TCP socket, exiting" << endl;
     exit(1);
   }
 
   tcpaddr.sin_family = AF_INET;
   tcpaddr.sin_port = htons(this_node.tcp_port);
-  tcpaddr.sin_addr.s_addr = host; 
-  tcpaddr.sin_family = AF_INET;
+  tcpaddr.sin_addr.s_addr = HOST; 
+
 
   int result = bind(
     this_node.tcp_socket,
@@ -35,29 +34,29 @@ void init_ports(Node& this_node) {
   );
 
   if(result < 0 ) {
-    std::cout << "Failed to bind TCP socket, exiting" << std::endl;
+    cout << "Failed to bind TCP socket, exiting" << endl;
     close_sockets(this_node);  
     exit(1);
   }
 
   if(listen(this_node.tcp_socket, 5) != 0) {
-    std::cout << "TCP socket failed to listen, exiting" << std::endl;
+    cout << "TCP socket failed to listen, exiting" << endl;
     close_sockets(this_node);
     exit(1);
   }
   if(fcntl(this_node.tcp_socket, F_SETFL, O_NONBLOCK) != 0) {
-    std::cout << "TCP socket failed to set non-blocking, exiting" << std::endl;
+    cout << "TCP socket failed to set non-blocking, exiting" << endl;
     close_sockets(this_node);
     exit(1);
   }
   udpaddr.sin_family = AF_INET;
   udpaddr.sin_port = htons(this_node.udp_port);
-  udpaddr.sin_addr.s_addr = host; 
+  udpaddr.sin_addr.s_addr = HOST; 
   udpaddr.sin_family = AF_INET;
 
   this_node.udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
   if(this_node.udp_socket < 0) {
-    std::cout << "Failed to allocate UDP socket, exiting" << std::endl;
+    cout << "Failed to allocate UDP socket, exiting" << endl;
     close_sockets(this_node);
     exit(1);
   }
@@ -68,43 +67,80 @@ void init_ports(Node& this_node) {
     sizeof(struct sockaddr_in)
   );
   if(result < 0 ) {
-    std::cout << "Failed to bind UDP socket, exiting" << std::endl;
+    cout << "Failed to bind UDP socket, exiting" << endl;
     close_sockets(this_node);
     exit(1);
   }
 
   if(fcntl(this_node.udp_socket, F_SETFL, O_NONBLOCK) != 0) {
-    std::cout << "UDP socket failed to set non-blocking, exiting" << std::endl;
+    cout << "UDP socket failed to set non-blocking, exiting" << endl;
     close_sockets(this_node);
     exit(1);
   }
 
   // Wait for everyone else to bind their ports
   sleep(5);
-  std::cout << "You can send frames now" << std::endl;
+  cout << "You can send frames now" << endl;
 }
 
-
-
 void send_name_frames(Node& this_node) {
+  Frame name_frame = Frame(
+    this_node.name.c_str(),
+    "",
+    list<string>(),
+    -1,
+    -1,
+    NAME_FRAME
+  );
+  string frame_str = name_frame.to_string();
+  size_t len = frame_str.size();
+  struct sockaddr_in out_addr;
+  out_addr.sin_family = AF_INET;
+  out_addr.sin_addr.s_addr = HOST;
+
+  for(std::pair<int, std::string> element : this_node.neighbours) {
+    int port = element.first;
+    out_addr.sin_port = htons(port);
+    int sent = sendto(
+      this_node.udp_socket,
+      frame_str.c_str(),
+      len,
+      0,
+      (struct sockaddr*)& out_addr,
+      sizeof out_addr
+    );
+    if(sent < 0) {
+      cout << "Error in sending frame " << frame_str << endl;
+      close_sockets(this_node);
+      exit(1);
+    }
+  }
   return;
 }
 
 void handle_sockets(Node& this_node, fd_set* rfds) {
   char buf[MAX_PACKET_LEN];
   size_t len = MAX_PACKET_LEN;
-  struct sockaddr from;
+  struct sockaddr_in from;
   socklen_t fromlen;
 
   if(FD_ISSET(this_node.udp_socket, rfds)) {
     // We have UDP
-    size_t read = recvfrom(this_node.udp_socket, &buf, len, 0, &from, &fromlen);
-    std::string frame(buf, read);
-    handle_udp(this_node, frame);
+    size_t read = recvfrom(
+      this_node.udp_socket,
+      &buf,
+      len,
+      0,
+      (struct sockaddr *) &from,
+      &fromlen
+    );
+    string frame(buf, read);
+    uint16_t port = ntohs(from.sin_port);
+    handle_udp(this_node, frame, port);
   } 
 
   if(FD_ISSET(this_node.tcp_socket, rfds)) {
-    std::cout << "TCP socket has a frame" << std::endl;
+    cout << "TCP socket has a frame" << endl;
   }
 }
 
@@ -134,7 +170,7 @@ void listen_on_ports(Node& this_node) {
 
       fdsready = select(largestfd + 1, &rfds, NULL, NULL, &tv);
       if(fdsready == -1) {
-        std::cout << "Error in select, exiting" << std::endl;
+        cout << "Error in select, exiting" << endl;
         close_sockets(this_node);
         exit(1);
       } else if(fdsready > 0) {
@@ -145,16 +181,16 @@ void listen_on_ports(Node& this_node) {
 
 int main(int argc, char *argv[]) {
   if(argc <= 2) {
-    std::cout << "Server needs arguments to work" << std::endl;
+    cout << "Server needs arguments to work" << endl;
     exit(1);
   }
   Node this_node = parse_args(argc, argv);
-  std::cout << "Node: "
+  cout << "Node: "
             << this_node.name
             << " running with PID "
-            << getpid() << std::endl;
+            << getpid() << endl;
   init_ports(this_node);
-  // send_name_frames(this_node);
+  send_name_frames(this_node);
   listen_on_ports(this_node);
   return 0;
 }

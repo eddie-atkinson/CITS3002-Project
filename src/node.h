@@ -11,7 +11,7 @@ class Node {
 		std::string name;
 		int udp_port;
 		int tcp_port;
-		std::map<int, std::string> neighbours;
+		std::map<uint16_t, std::string> neighbours;
 		int udp_socket;
 		int tcp_socket;
 		std::map<int, int> response_sockets;
