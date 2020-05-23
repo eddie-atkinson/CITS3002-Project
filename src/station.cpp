@@ -35,19 +35,16 @@ void init_ports(Node& this_node) {
 
   if(result < 0 ) {
     cout << "Failed to bind TCP socket, exiting" << endl;
-    close_sockets(this_node);  
-    exit(1);
+    this_node.quit(1);  
   }
 
   if(listen(this_node.tcp_socket, 5) != 0) {
     cout << "TCP socket failed to listen, exiting" << endl;
-    close_sockets(this_node);
-    exit(1);
+    this_node.quit(1);  
   }
   if(fcntl(this_node.tcp_socket, F_SETFL, O_NONBLOCK) != 0) {
     cout << "TCP socket failed to set non-blocking, exiting" << endl;
-    close_sockets(this_node);
-    exit(1);
+    this_node.quit(1);  
   }
   udpaddr.sin_family = AF_INET;
   udpaddr.sin_port = htons(this_node.udp_port);
@@ -57,8 +54,7 @@ void init_ports(Node& this_node) {
   this_node.udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
   if(this_node.udp_socket < 0) {
     cout << "Failed to allocate UDP socket, exiting" << endl;
-    close_sockets(this_node);
-    exit(1);
+    this_node.quit(1);  
   }
   
   result = bind(
@@ -68,14 +64,12 @@ void init_ports(Node& this_node) {
   );
   if(result < 0 ) {
     cout << "Failed to bind UDP socket, exiting" << endl;
-    close_sockets(this_node);
-    exit(1);
+    this_node.quit(1);  
   }
 
   if(fcntl(this_node.udp_socket, F_SETFL, O_NONBLOCK) != 0) {
     cout << "UDP socket failed to set non-blocking, exiting" << endl;
-    close_sockets(this_node);
-    exit(1);
+    this_node.quit(1);  
   }
 
   // Wait for everyone else to bind their ports
@@ -111,8 +105,7 @@ void send_name_frames(Node& this_node) {
     );
     if(sent < 0) {
       cout << "Error in sending frame " << frame_str << endl;
-      close_sockets(this_node);
-      exit(1);
+      this_node.quit(1);  
     }
   }
   return;
@@ -171,7 +164,7 @@ void listen_on_ports(Node& this_node) {
       fdsready = select(largestfd + 1, &rfds, NULL, NULL, &tv);
       if(fdsready == -1) {
         cout << "Error in select, exiting" << endl;
-        close_sockets(this_node);
+        this_node.quit(1);  
         exit(1);
       } else if(fdsready > 0) {
         handle_sockets(this_node, &rfds);

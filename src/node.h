@@ -5,6 +5,8 @@
 #include <string> 
 #include <map>
 #include <vector>
+#include <unistd.h>
+#include "journey.h"
 
 class Node {
 	public:
@@ -18,7 +20,9 @@ class Node {
 		std::vector<int> outstanding_frames; // TODO: change to Response objects when implemented
 		int seqno;
 		std::vector<int> input_sockets;
+		std::map<std::string, std::vector<class Journey>> timetables;
 		int last_timetable_check; 
-		Node();
+		Node(void);
+		void quit(int status);
 };
 #endif
