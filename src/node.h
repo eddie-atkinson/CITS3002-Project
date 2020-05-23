@@ -9,8 +9,8 @@
 class Node {
 	public:
 		std::string name;
-		int udp_port;
-		int tcp_port;
+		uint16_t udp_port;
+		uint16_t tcp_port;
 		std::map<uint16_t, std::string> neighbours;
 		int udp_socket;
 		int tcp_socket;

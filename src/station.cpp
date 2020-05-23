@@ -122,7 +122,7 @@ void handle_sockets(Node& this_node, fd_set* rfds) {
   char buf[MAX_PACKET_LEN];
   size_t len = MAX_PACKET_LEN;
   struct sockaddr_in from;
-  socklen_t fromlen;
+  socklen_t fromlen = sizeof(from);
 
   if(FD_ISSET(this_node.udp_socket, rfds)) {
     // We have UDP

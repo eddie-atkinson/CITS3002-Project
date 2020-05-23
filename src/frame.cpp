@@ -52,7 +52,6 @@ void Frame::from_string(std::string in_str) {
     key = token.substr(0, inner_pos);
     value = token.substr(inner_pos + 1, token.length());
     tokens.insert({key, value});
-    cout << key << endl;
     in_str.erase(0, pos + delimiter.length());
   }
   // Run one last time for last token
@@ -62,7 +61,6 @@ void Frame::from_string(std::string in_str) {
   key = token.substr(0, inner_pos);
   value = token.substr(inner_pos + 1, token.length());
   tokens.insert({key, value});
-  cout << key << endl;
   in_str.erase(0, pos + delimiter.length());
 
   string src_string;
