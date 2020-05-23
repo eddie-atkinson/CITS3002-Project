@@ -8,3 +8,8 @@ void Node::quit(int status) {
 	close(udp_socket);
 	exit(status);
 }
+
+void Node::check_timetable(void) {
+	// struct stat st;
+	// string file_name = 	
+}

@@ -2,10 +2,9 @@
 #ifndef NODE_H
 #define NODE_H
 #include <iostream>
-#include <string> 
-#include <map>
-#include <vector>
 #include <unistd.h>
+#include <sys/stat.h>
+#include "common.h"
 #include "journey.h"
 
 class Node {
@@ -23,6 +22,7 @@ class Node {
 		std::map<std::string, std::vector<class Journey>> timetables;
 		int last_timetable_check; 
 		Node(void);
+		void check_timetable(void);
 		void quit(int status);
 };
 #endif

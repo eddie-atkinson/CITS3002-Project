@@ -7,11 +7,10 @@
 #include "node.h"
 #include "frame.h"
 #include "frametype.h"
-using std::string;
-using std::endl;
-using std::list;
-using std::cout;
-void handle_udp(Node& this_node, std::string& transmission, uint16_t port);
+#include "common.h"
+void process_udp(Node& this_node, std::string& transmission, uint16_t port);
+void process_request_frame();
+void process_response_frame();
 #endif
 
 

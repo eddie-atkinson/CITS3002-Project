@@ -25,9 +25,10 @@ Journey::Journey(string& in_str) {
   destination = tokens.front();
   tokens.pop_front();
 }
+Journey::Journey() {}
 
 string Journey::to_string() {
-  ostringstream ss;
+  std::ostringstream ss;
   ss << "String representation: " << string_rep << endl
      << "Destination: " << destination << endl
      << "Departure time: " << departure_time << endl

@@ -129,7 +129,7 @@ void handle_sockets(Node& this_node, fd_set* rfds) {
     );
     string frame(buf, read);
     uint16_t port = ntohs(from.sin_port);
-    handle_udp(this_node, frame, port);
+    process_udp(this_node, frame, port);
   } 
 
   if(FD_ISSET(this_node.tcp_socket, rfds)) {
