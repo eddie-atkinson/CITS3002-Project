@@ -4,6 +4,8 @@
 #include <regex>
 #include "common.h"
 #include "node.h"
+#include "frametype.h"
+#include "frame.h"
 void handle_tcp(Node& this_node, string& message, int socket);
 #endif
 
