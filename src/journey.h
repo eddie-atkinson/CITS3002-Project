@@ -12,8 +12,8 @@ class Journey {
 	public:
     string string_rep;
     string destination;
-    struct tm* departure_time;
-    int duration_in_secs;
+    struct tm departure_time;
+    time_t duration_in_secs;
     Journey(const string& in_str);
     string to_string() const;
     // bool operator < (const Journey& journeyObj) const;

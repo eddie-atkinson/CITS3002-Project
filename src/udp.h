@@ -4,6 +4,7 @@
 #include <string>
 #include <list>
 #include <sstream>
+#include <unordered_set>
 #include "node.h"
 #include "frame.h"
 #include "frametype.h"
