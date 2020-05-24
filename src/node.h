@@ -31,5 +31,6 @@ class Node {
 		Node(void);
 		void check_timetable(void);
 		void quit(int status);
+		void remove_socket(int fd);
 };
 #endif

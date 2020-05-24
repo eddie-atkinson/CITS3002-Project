@@ -117,54 +117,53 @@ void handle_sockets(Node& this_node, fd_set* rfds) {
   struct sockaddr_in from;
   socklen_t fromlen = sizeof(from);
   size_t read;
-
-  if(FD_ISSET(this_node.udp_socket, rfds)) {
-    // We have UDP
-      read = recvfrom(
-      this_node.udp_socket,
-      &buf,
-      len,
-      0,
-      (struct sockaddr *) &from,
-      &fromlen
-    );
-    string frame(buf, read);
-    uint16_t port = ntohs(from.sin_port);
-    process_udp(this_node, frame, port);
-  } 
-
-  if(FD_ISSET(this_node.tcp_socket, rfds)) {
-    int new_sock = accept(
-      this_node.tcp_socket,
-      (struct sockaddr *) &from,
-      &fromlen
-    );
-    if(fcntl(new_sock, F_SETFL, O_NONBLOCK) != 0) {
-    cout << "New socket failed to set non-blocking, exiting" << endl;
-    this_node.quit(1);  
-  }
-    this_node.input_sockets.push_back(new_sock);
-    cout << "Received new connection from " 
-    << inet_ntoa(from.sin_addr)
-    << ":" << ntohs(from.sin_port) <<  endl;
-  }
-  
-  for(unsigned int i = 0; i < this_node.input_sockets.size(); ++i) {
+  for (unsigned int i = 0; i < this_node.input_sockets.size(); ++i) {
     int socket = this_node.input_sockets.at(i);
-    if(FD_ISSET(socket, rfds)) {
-      read = recv(socket, buf, len, 0);
-      if(read == 0) {
-        // Connection has closed
-        this_node.input_sockets.erase(this_node.input_sockets.begin() + i);
-        cout << "Closing connection to " << socket << endl;
-        shutdown(socket, SHUT_RD);
-        close(socket);
-      } else if(read > 0) {
-        // string frame(buf, read);
-        // handle_tcp(this_node, frame, socket);
+    if (FD_ISSET(socket, rfds)) {
+      if (socket == this_node.udp_socket) {
+        // UDP received
+        read = recvfrom(
+          this_node.udp_socket, &
+          buf,
+          len,
+          0,
+          (struct sockaddr * ) & from, &
+          fromlen
+        );
+        string frame(buf, read);
+        uint16_t port = ntohs(from.sin_port);
+        process_udp(this_node, frame, port);
+      } else if (socket == this_node.tcp_socket) {
+        // New TCP connection
+        int new_sock = accept(
+          this_node.tcp_socket,
+          (struct sockaddr * ) & from, &
+          fromlen
+        );
+        if (fcntl(new_sock, F_SETFL, O_NONBLOCK) != 0) {
+          cout << "New socket failed to set non-blocking, exiting" << endl;
+          this_node.quit(1);
+        }
+        this_node.input_sockets.push_back(new_sock);
+        cout << "Received new connection from " <<
+          inet_ntoa(from.sin_addr) <<
+          ":" << ntohs(from.sin_port) << endl;
       } else {
-        cout << "Failed read operation on TCP socket, exiting" << endl;
-        this_node.quit(1);
+        // Servicing existing TCP connections
+        read = recv(socket, buf, len, 0);
+        if (read == 0) {
+          // Connection has closed
+          this_node.input_sockets.erase(this_node.input_sockets.begin() + i);
+          cout << "Closing connection to " << socket << endl;
+          shutdown(socket, SHUT_RD);
+          close(socket);
+        } else if (read > 0) {
+          string frame(buf, read);
+          handle_tcp(this_node, frame, socket);
+        } else {
+          cout << "Failed read operation on TCP socket, exiting" << endl;
+          this_node.quit(1);
+        }
       }
     }
   }

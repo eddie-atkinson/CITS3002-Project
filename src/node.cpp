@@ -42,3 +42,14 @@ void Node::check_timetable(void) {
   }
 
 }
+
+void Node::remove_socket(int fd) {
+  for(unsigned int i = 0; i < input_sockets.size(); ++i) {
+    if(input_sockets.at(i) == fd) {
+      input_sockets.erase(input_sockets.begin() + i);
+      break;
+    }
+  }
+  shutdown(fd, SHUT_RD);
+  close(fd);
+}
