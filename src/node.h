@@ -4,8 +4,10 @@
 #include <iostream>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <time.h>
 #include "common.h"
 #include "journey.h"
+#include "util.h"
 
 class Node {
 	public:
@@ -20,7 +22,7 @@ class Node {
 		int seqno;
 		std::vector<int> input_sockets;
 		std::map<std::string, std::vector<class Journey>> timetables;
-		int last_timetable_check; 
+		time_t last_timetable_check; 
 		Node(void);
 		void check_timetable(void);
 		void quit(int status);

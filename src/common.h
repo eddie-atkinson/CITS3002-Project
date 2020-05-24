@@ -5,6 +5,7 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <fstream>
 using std::string;
 using std::map;
 using std::vector;
