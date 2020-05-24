@@ -4,7 +4,7 @@ Frame::Frame(
   const char* dest,
   list<string> src,
   int seqno,
-  int time,
+  time_t time,
   FrameType type
 ): 
 origin(origin),

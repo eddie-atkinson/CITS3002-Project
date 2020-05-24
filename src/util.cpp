@@ -28,3 +28,8 @@ string http_string(
    ss << "</body></html>";
    return ss.str();
 }
+
+struct tm* normalise_time() {
+   time_t origin = 0;
+   return gmtime(&origin);
+}

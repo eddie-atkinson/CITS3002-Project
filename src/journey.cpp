@@ -1,35 +1,33 @@
 #include "journey.h"
 
 Journey::Journey(const string& in_str): string_rep(in_str) {
-  std::tm arrival_time;
-  // Zero time structs to start at common epoch
-  memset(&departure_time, 0, sizeof(struct tm));
-  memset(&arrival_time, 0, sizeof(struct tm));
-
-  // Set the month to january
-  departure_time.tm_mday = 1;
-  arrival_time.tm_mday = 1;
+  struct tm* arrival_time;
+  arrival_time = normalise_time();
+  departure_time = normalise_time();
 
   string temp_str = string_rep;
   list<string> tokens = split(temp_str, ',');
-  strptime(tokens.front().c_str(), "%H:%M", &departure_time);
+  strptime(tokens.front().c_str(), "%H:%M", departure_time);
   tokens.pop_front();
   // Don't care about bus or stop name
   tokens.pop_front();
   tokens.pop_front();
-
-  strptime(tokens.front().c_str(), "%H:%M", &arrival_time);
-  duration_in_secs = mktime(&arrival_time) - mktime(&departure_time);
+  cout << to_string() << endl;
+  strptime(tokens.front().c_str(), "%H:%M", arrival_time);
+  duration_in_secs = mktime(arrival_time) - mktime(departure_time);
   tokens.pop_front();
   destination = tokens.front();
   tokens.pop_front();
+  cout << to_string() << endl;
 }
 
 string Journey::to_string() const {
   std::ostringstream ss;
+  char outstr[200];
+  strftime(outstr, sizeof(outstr), "%c", departure_time);
   ss << "String representation: " << string_rep << endl
      << "Destination: " << destination << endl
-     << "Departure time: " << asctime(&departure_time)
+     << "Departure time: " << outstr << endl
      << "Duration in secs: " << duration_in_secs << endl << endl;
       
   return ss.str();

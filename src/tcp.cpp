@@ -30,4 +30,6 @@ void handle_tcp(Node& this_node, string& message, int socket) {
 	);
 	this_node.response_sockets[this_node.seqno] = socket;
 	this_node.seqno = (this_node.seqno + 1) % MAX_INT;
+	this_node.check_timetable();
+	send_frame_to_neighbours(this_node, request_frame);
 }
