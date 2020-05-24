@@ -5,23 +5,28 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <locale>
+#include <iomanip>
+#include <sstream>
+#include <algorithm>
+#include <sys/socket.h>
 #include "common.h"
 #include "journey.h"
 #include "util.h"
 
 class Node {
 	public:
-		std::string name;
+		string name;
 		uint16_t udp_port;
 		uint16_t tcp_port;
-		std::map<uint16_t, std::string> neighbours;
+		map<uint16_t, string> neighbours;
 		int udp_socket;
 		int tcp_socket;
-		std::map<int, int> response_sockets;
-		std::vector<int> outstanding_frames; // TODO: change to Response objects when implemented
+		map<int, int> response_sockets;
+		vector<int> outstanding_frames; // TODO: change to Response objects when implemented
 		int seqno;
-		std::vector<int> input_sockets;
-		std::map<std::string, std::vector<class Journey>> timetables;
+		vector<int> input_sockets;
+		map<string, list<class Journey>> timetables;
 		time_t last_timetable_check; 
 		Node(void);
 		void check_timetable(void);
