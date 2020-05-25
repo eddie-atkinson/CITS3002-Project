@@ -19,12 +19,15 @@ def check_timetable(this_node: Node) -> None:
                 # We are not interested in the header info
                 lines = in_file.readlines()[1:]
                 for line in lines:
+                    if line.startswith("#"):
+                        continue
                     line = line.strip("\n")
                     info = line.split(",")
                     journey = Journey(line, info[-1], info[0], info[-2])
                     if journey.destination not in this_node.timetables.keys():
                         this_node.timetables[journey.destination] = []
                     this_node.timetables[journey.destination].append(journey)
+            this_node.last_timetable_check = int(time.time())
 
         # Just in case the timetables were not in chronological order
         for timetable in this_node.timetables.values():
