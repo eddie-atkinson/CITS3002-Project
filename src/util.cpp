@@ -27,3 +27,8 @@ string http_string(
   ss << "</body></html>";
   return ss.str();
 }
+
+class Journey& find_next_trip(list<class Journey>& timetable, int start_time) {
+   //TODO: Implement this
+   return timetable.front();
+}

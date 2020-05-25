@@ -41,32 +41,34 @@ void process_request_frame(Node& this_node, Frame& in_frame) {
 
 void process_response_frame(){}
 
-// void send_frame_to_neighbours(Node& this_node, Frame& out_frame) {
-//   int sent_frames = 0;
-//   out_frame.src.push_back(this_node.name);
-//   time_t start_time;
-//   if(out_frame.time == -1) {
-//     start_time = time(NULL);
-//   } else {
-//     start_time = out_frame.time;
-//   }
-//   std::unordered_set<string> src_set;
-//   // Add src list to set for (almost) constant checks
-//   std::copy(
-//     out_frame.src.begin(),
-//     out_frame.src.end(),
-//     std::inserter(src_set, src_set.end())
-//   );
-//   for(auto neighbour: this_node.neighbours) {
-//     if(src_set.find(neighbour.second) == src_set.end()) {
-//       // We haven't sent the frame here before
-//       list<class Journey> timetable = this_node.timetables[neighbour.second];
-//       // out_frame.time = calc_arrival_time(timetable, start_time);
-//       ++sent_frames;
-//     }
-//   }
-//   return;
-// }
+void send_frame_to_neighbours(Node& this_node, Frame& out_frame) {
+  int sent_frames = 0;
+  out_frame.src.push_back(this_node.name);
+  int start_time;
+  if(out_frame.time == -1) {
+    time_t temp_time = time(NULL);
+    struct tm* temp_struct = localtime(&temp_time);
+    start_time = (temp_struct->tm_hour * 60) + temp_struct->tm_min;
+  } else {
+    start_time = out_frame.time;
+  }
+  std::unordered_set<string> src_set;
+  // Add src list to set for (almost) constant checks
+  std::copy(
+    out_frame.src.begin(),
+    out_frame.src.end(),
+    std::inserter(src_set, src_set.end())
+  );
+  for(auto neighbour: this_node.neighbours) {
+    if(src_set.find(neighbour.second) == src_set.end()) {
+      // We haven't sent the frame here before
+      list<class Journey> timetable = this_node.timetables[neighbour.second];
+      Journey next_trip = find_next_trip(timetable, start_time);
+      ++sent_frames;
+    }
+  }
+  return;
+}
 
 void process_udp(Node& this_node, string& transmission, uint16_t port) {
 	cout << "Received UDP packet from port " << port << endl;

@@ -11,4 +11,5 @@ string http_string(
 	string response_msg,
 	list<string> messages
 );
+class Journey& find_next_trip(list<class Journey>& timetable, int start_time);
 #endif
