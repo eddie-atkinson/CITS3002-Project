@@ -37,11 +37,6 @@ def check_timetable(this_node: Node) -> None:
         print(f"{file_name} for node {this_node.name} not found, exiting")
         sys.exit(0)
 
-
-def normalise_time(time_struct: time.struct_time) -> time.struct_time:
-    string_rep = f"{time_struct[3]}:{time_struct[4]}"
-    return time.strptime(string_rep, "%H:%M")
-
 def find_next_trip(timetable: list, start_time: int) -> Journey:
     next_journey = None
     for journey in timetable:
@@ -53,7 +48,6 @@ def find_next_trip(timetable: list, start_time: int) -> Journey:
 
 def calc_arrival_time(timetable: list, start_time: int) -> int:
     local_time = time.localtime(start_time)
-    time_obj = normalise_time(local_time)
     next_journey = find_next_trip(timetable, start_time)
     if next_journey is None:
         return None
