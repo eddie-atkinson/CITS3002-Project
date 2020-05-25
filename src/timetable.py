@@ -45,11 +45,3 @@ def find_next_trip(timetable: list, start_time: int) -> Journey:
             break
     return next_journey
 
-
-def calc_arrival_time(timetable: list, start_time: int) -> int:
-    local_time = time.localtime(start_time)
-    next_journey = find_next_trip(timetable, start_time)
-    if next_journey is None:
-        return None
-    
-    return next_journey.arrival_time

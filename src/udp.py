@@ -49,10 +49,10 @@ def send_frame_to_neighbours(
         if name not in out_frame.src:
             try:
                 timetable = this_node.timetables[name]
-                arrival_time = calc_arrival_time(timetable, start_time)
-                if arrival_time is None:
+                journey = find_next_trip(timetable, start_time)
+                if journey is None:
                     continue
-                out_frame.time = arrival_time
+                out_frame.time = journey.arrival_time
                 this_node.udp_socket.sendto(out_frame.to_bytes(), (HOST, port))
                 sent_frames += 1
             except KeyError:
@@ -195,7 +195,6 @@ def process_response_frame(
                 time_obj = time.localtime(int(time.time()))
                 start_time = (time_obj.tm_hour * 60) + time_obj.tm_min
                 next_journey = find_next_trip(timetable, start_time)
-
                 hours = response_obj.time // 60 
                 minutes = response_obj.time % 60
                 if minutes < 10:
