@@ -5,6 +5,7 @@
 #include <list>
 #include <sstream>
 #include <netinet/in.h>
+#include <unordered_set>
 #include "node.h"
 #include "frame.h"
 #include "frametype.h"
