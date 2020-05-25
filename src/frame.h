@@ -12,7 +12,7 @@ class Frame {
     string dest;
     list<string> src;
     int seqno;
-    int time;
+    time_t time;
     FrameType type;
     Frame();
     Frame(
@@ -20,7 +20,7 @@ class Frame {
       string dest,
       list<string> src,
       int seqno,
-      int time,
+      time_t time,
       FrameType type
     );
     string to_string();

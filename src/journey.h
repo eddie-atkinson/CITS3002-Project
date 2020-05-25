@@ -2,8 +2,8 @@
 #define JOURNEY_H
 #include <iostream>
 #include <sstream>
-#include <locale>
 #include <string.h>
+#include <time.h>
 #include "node.h"
 #include "util.h"
 #include "common.h"
