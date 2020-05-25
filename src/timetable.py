@@ -40,12 +40,9 @@ def normalise_time(time_struct: time.struct_time) -> time.struct_time:
     return time.strptime(string_rep, "%H:%M")
 
 def find_next_trip(timetable: list, start_time: int) -> Journey:
-    local_time = time.localtime(start_time)
-    time_obj = normalise_time(local_time)
-    # In case there isn't another journey till tomorrow
-    next_journey = timetable[0]
+    next_journey = None
     for journey in timetable:
-        if journey.departure_time > time_obj:
+        if journey.departure_time > start_time:
             next_journey = journey
             break
     return next_journey
@@ -55,15 +52,7 @@ def calc_arrival_time(timetable: list, start_time: int) -> int:
     local_time = time.localtime(start_time)
     time_obj = normalise_time(local_time)
     next_journey = find_next_trip(timetable, start_time)
-    wait_time = int(
-        time.mktime(next_journey.departure_time) - time.mktime(time_obj)
-    )
-    if wait_time < 0:
-        # Next journey is tomorrow
-        leaving_time = start_time + (SECONDS_IN_DAY + wait_time)
-    else:
-        leaving_time = start_time + wait_time
-	
-    arrival_time = leaving_time + next_journey.duration_in_secs 
-
-    return arrival_time
+    if next_journey is None:
+        return None
+    
+    return next_journey.arrival_time

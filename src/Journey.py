@@ -3,8 +3,8 @@ import time
 class Journey:
     string_rep: str
     destination: str
-    departure_time: time.struct_time
-    duration_in_secs: int
+    departure_time: int
+    arrival_time: int
 
     def __init__(
         self,
@@ -17,17 +17,20 @@ class Journey:
         self.string_rep = ", ".join(string_rep.split(","))
         self.destination = destination
         if departure_time:
-            self.departure_time = time.strptime(departure_time, "%H:%M")
+            time_split = departure_time.split(":")
+            hours = int(time_split[0])
+            minutes = int(time_split[1])
+            self.departure_time = (hours * 60) + minutes
         if arrival_time:
-            arrival_time_obj = time.strptime(arrival_time, "%H:%M")
-        self.duration_in_secs = int(
-            time.mktime(arrival_time_obj) - time.mktime(self.departure_time)
-        )
+            time_split = arrival_time.split(":")
+            hours = int(time_split[0])
+            minutes = int(time_split[1])
+            self.arrival_time = (hours * 60) + minutes
 
     def __str__(self):
         return (
             f"String rep: {self.string_rep}"
             f"\nDestination: {self.destination}"
             f"\nDeparture Time: {time.strftime('%H:%M', self.departure_time)}"
-            f"\nDuration in secs: {self.duration_in_secs}"
+            f"\nArrival time: {self.arrival_time}"
         )

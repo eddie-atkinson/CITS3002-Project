@@ -37,7 +37,12 @@ void Node::check_timetable(void) {
       }
       timetables[nxt_jrn.destination].push_back(nxt_jrn);
     }
-    // TODO: Sort journeys in order of departure time
+    for(auto timetable: timetables) {
+      timetable.second.sort([](const Journey& jrn_a, const Journey& jrn_b) {
+        return jrn_a.departure_time < jrn_b.departure_time;
+      });
+    }
+
     last_timetable_check = time(NULL);
   }
 

@@ -41,14 +41,18 @@ def send_frame_to_neighbours(
     sent_frames = 0
     out_frame.src.append(this_node.name)
     if out_frame.time == -1:
-        start_time = int(time.time())
+        time_obj = time.localtime(int(time.time()))
+        start_time = (time_obj.tm_hour * 60) + time_obj.tm_min
     else:
         start_time = out_frame.time
     for port, name in this_node.neighbours.items():
         if name not in out_frame.src:
             try:
                 timetable = this_node.timetables[name]
-                out_frame.time = calc_arrival_time(timetable, start_time)
+                arrival_time = calc_arrival_time(timetable, start_time)
+                if arrival_time is None:
+                    continue
+                out_frame.time = arrival_time
                 this_node.udp_socket.sendto(out_frame.to_bytes(), (HOST, port))
                 sent_frames += 1
             except KeyError:
@@ -169,12 +173,18 @@ def process_response_frame(
         if in_frame.dest == this_node.name:
             print(f"End of the line, let's respond to the TCP socket")
             timetable = this_node.timetables[response_obj.stop]
-            next_journey = find_next_trip(timetable, int(time.time()))
-            arrival_timestamp = time.strftime(
-                "%c", time.localtime(response_obj.time)
-            )
+            
+            time_obj = time.localtime(int(time.time()))
+            start_time = (time_obj.tm_hour * 60) + time_obj.tm_min
+            
+            next_journey = find_next_trip(timetable, start_time)
+            hours = response_obj.time // 60 
+            minutes = response_obj.time % 60
+            if minutes < 10:
+                minutes = f"0{minutes}"
+            arrival_time = f"{hours}:{minutes}"
             http_lines = [
-                f"Arrival time at destination: {arrival_timestamp}",
+                f"Arrival time at destination: {arrival_time}",
                 f"Next leg of trip: {next_journey.string_rep}"
             ]
             http_response = http_string(200, "OK", http_lines)

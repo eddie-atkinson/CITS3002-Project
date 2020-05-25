@@ -12,11 +12,10 @@ class Journey {
 	public:
     string string_rep;
     string destination;
-    std::tm departure_time;
-    int duration_in_secs;
+    int departure_time;
+    int arrival_time;
     Journey(const string& in_str);
     string to_string() const;
-    // bool operator < (const Journey& journeyObj) const;
 };
 #endif
 
