@@ -41,14 +41,18 @@ def send_frame_to_neighbours(
     sent_frames = 0
     out_frame.src.append(this_node.name)
     if out_frame.time == -1:
-        start_time = int(time.time())
+        time_obj = time.localtime(int(time.time()))
+        start_time = (time_obj.tm_hour * 60) + time_obj.tm_min
     else:
         start_time = out_frame.time
     for port, name in this_node.neighbours.items():
         if name not in out_frame.src:
             try:
                 timetable = this_node.timetables[name]
-                out_frame.time = calc_arrival_time(timetable, start_time)
+                arrival_time = calc_arrival_time(timetable, start_time)
+                if arrival_time is None:
+                    continue
+                out_frame.time = arrival_time
                 this_node.udp_socket.sendto(out_frame.to_bytes(), (HOST, port))
                 sent_frames += 1
             except KeyError:
@@ -56,26 +60,40 @@ def send_frame_to_neighbours(
             
     
     if sent_frames == 0:
-        # Everyone around us has seen this frame
-        response_frame = Frame(
-            origin=out_frame.dest,
-            dest=out_frame.origin,
-            src=out_frame.src,
-            seqno=out_frame.seqno,
-            time=-1,
-            type=FrameType.RESPONSE            
-        )
-        out_port = get_port_from_name(this_node, out_frame.src[-2])
-        this_node.udp_socket.sendto(
-            response_frame.to_bytes(),
-            (HOST, out_port)
-        )
+        if out_frame.origin == this_node.name:
+            # We can't get anywhere
+            out_socket = this_node.response_sockets[out_frame.seqno]
+            http_lines = [
+                f"Arrival time at destination: Couldn't get there",
+                f"Next leg of trip: None"
+            ]
+            http_response = http_string(200, "OK", http_lines)
+            out_socket.send(http_response.encode("utf-8"))
+            this_node.input_sockets.remove(out_socket)
+            out_socket.shutdown(socket.SHUT_RD)
+            out_socket.close()
+        
+        else:
+            # Everyone around us has seen this frame
+            response_frame = Frame(
+                origin=out_frame.dest,
+                dest=out_frame.origin,
+                src=out_frame.src,
+                seqno=out_frame.seqno,
+                time=-1,
+                type=FrameType.RESPONSE            
+            )
+            out_port = get_port_from_name(this_node, out_frame.src[-2])
+            this_node.udp_socket.sendto(
+                response_frame.to_bytes(),
+                (HOST, out_port)
+            )
     else:
         outstanding_response = Response(
             sent_frames,
             out_frame,
             -1,
-            "Nowhere"
+            ""
         )
         this_node.outstanding_frames.append(outstanding_response)
 
@@ -168,14 +186,25 @@ def process_response_frame(
     if response_obj.remaining_responses == 0:
         if in_frame.dest == this_node.name:
             print(f"End of the line, let's respond to the TCP socket")
-            timetable = this_node.timetables[response_obj.stop]
-            next_journey = find_next_trip(timetable, int(time.time()))
-            arrival_timestamp = time.strftime(
-                "%c", time.localtime(response_obj.time)
-            )
+            if response_obj.time < 0:
+                # We couldn't get there
+                arrival_time = f"Couldn't get there"
+                itinerary = "None"
+            else:
+                timetable = this_node.timetables[response_obj.stop]
+                time_obj = time.localtime(int(time.time()))
+                start_time = (time_obj.tm_hour * 60) + time_obj.tm_min
+                next_journey = find_next_trip(timetable, start_time)
+
+                hours = response_obj.time // 60 
+                minutes = response_obj.time % 60
+                if minutes < 10:
+                    minutes = f"0{minutes}"
+                arrival_time = f"{hours}:{minutes}"
+                itinerary = next_journey.string_rep
             http_lines = [
-                f"Arrival time at destination: {arrival_timestamp}",
-                f"Next leg of trip: {next_journey.string_rep}"
+                f"Arrival time at destination: {arrival_time}",
+                f"Next leg of trip: {itinerary}"
             ]
             http_response = http_string(200, "OK", http_lines)
             out_socket = this_node.response_sockets[response_obj.frame.seqno]

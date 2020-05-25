@@ -16,14 +16,14 @@ class Frame {
     FrameType type;
     Frame();
     Frame(
-      const char* origin,
-      const char* dest,
+      string origin,
+      string dest,
       list<string> src,
       int seqno,
       time_t time,
       FrameType type
     );
     string to_string();
-    void from_string(string);
+    void from_string(string& in_str);
 };
 #endif

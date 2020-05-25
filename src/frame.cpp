@@ -1,7 +1,7 @@
 #include "frame.h"
 Frame::Frame(
-  const char* origin,
-  const char* dest,
+  string origin,
+  string dest,
   list<string> src,
   int seqno,
   time_t time,
@@ -35,7 +35,7 @@ string Frame::to_string() {
   return main_string.str();
 }
 
-void Frame::from_string(std::string in_str) {
+void Frame::from_string(string& in_str) {
   map<string, string> tokens; 
   string delimiter = ",";
   string inner_delimiter = ":";

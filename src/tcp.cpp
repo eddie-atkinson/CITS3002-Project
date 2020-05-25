@@ -1,7 +1,6 @@
 #include "tcp.h"
 
 void handle_tcp(Node& this_node, string& message, int socket) {
-	cout << "Received UDP tranmission " << message << endl;
 	std::regex reg_str("to=\\w+");
 	std::smatch match; 
 	std::regex_search(message, match, reg_str);
@@ -21,8 +20,8 @@ void handle_tcp(Node& this_node, string& message, int socket) {
 	destination.erase(0, pos + 1);
 	
 	Frame request_frame = Frame(
-		this_node.name.c_str(),
-		destination.c_str(),
+		this_node.name,
+		destination,
 		list<string>(),
 		this_node.seqno,
 		-1,
@@ -31,5 +30,5 @@ void handle_tcp(Node& this_node, string& message, int socket) {
 	this_node.response_sockets[this_node.seqno] = socket;
 	this_node.seqno = (this_node.seqno + 1) % MAX_INT;
 	this_node.check_timetable();
-	send_frame_to_neighbours(this_node, request_frame);
+	// send_frame_to_neighbours(this_node, request_frame);
 }
