@@ -79,7 +79,7 @@ void init_ports(Node& this_node) {
 
 void send_name_frames(Node& this_node) {
   Frame name_frame = Frame(
-    this_node.name.c_str(),
+    this_node.name,
     "",
     list<string>(),
     -1,

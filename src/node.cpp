@@ -31,6 +31,9 @@ void Node::check_timetable(void) {
     std::getline(file, line);
     list<string> tokens;
     while(std::getline(file, line)) {
+      if(line.at(0) == '#') {
+        continue;
+      }
       Journey nxt_jrn = Journey(line);
       if(timetables.find(nxt_jrn.destination) == timetables.end()) {
         timetables[nxt_jrn.destination] = list<class Journey>(); 
@@ -57,4 +60,13 @@ void Node::remove_socket(int fd) {
   }
   shutdown(fd, SHUT_RD);
   close(fd);
+}
+
+uint16_t Node::get_port_from_name(string& node_name) {
+  for(auto neighbour: neighbours) {
+    if(neighbour.second == node_name) {
+      return neighbour.first;
+    }
+  }
+  return -1;
 }

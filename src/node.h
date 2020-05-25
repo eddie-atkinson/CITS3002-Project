@@ -32,5 +32,6 @@ class Node {
 		void check_timetable(void);
 		void quit(int status);
 		void remove_socket(int fd);
+		uint16_t get_port_from_name(string& node_name);
 };
 #endif
