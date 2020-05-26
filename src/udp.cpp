@@ -33,7 +33,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   struct sockaddr_in to;
   to.sin_family = AF_INET;
   to.sin_addr.s_addr = HOST;
-  string sender_name = out_frame.src.back();
+  string &sender_name = out_frame.src.back();
   out_frame.src.push_back(this_node.name);
   int start_time;
   if (out_frame.time == -1) {
