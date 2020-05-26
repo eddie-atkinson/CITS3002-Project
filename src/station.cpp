@@ -79,8 +79,8 @@ void send_name_frames(Node &this_node) {
   out_addr.sin_family = AF_INET;
   out_addr.sin_addr.s_addr = HOST;
 
-  for (std::pair<int, std::string> element : this_node.neighbours) {
-    int port = element.first;
+  for (auto neighbour : this_node.neighbours) {
+    uint16_t port = neighbour.first;
     out_addr.sin_port = htons(port);
     int sent = sendto(this_node.udp_socket, frame_str.c_str(), len, 0,
                       (struct sockaddr *)&out_addr, sizeof out_addr);
