@@ -7,8 +7,8 @@ Frame::Frame(string origin, string dest, list<string> src, int seqno,
 Frame::Frame() {}
 
 string Frame::to_string() {
-  std::ostringstream src_string;
-  std::ostringstream main_string;
+  ostringstream src_string;
+  ostringstream main_string;
   list<string>::iterator it;
   for (it = src.begin(); it != src.end(); ++it) {
     src_string << *it;

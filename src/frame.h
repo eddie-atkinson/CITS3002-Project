@@ -4,7 +4,6 @@
 #include "frametype.h"
 #include "node.h"
 #include <iostream>
-#include <sstream>
 
 class Frame {
 public:

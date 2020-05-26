@@ -3,18 +3,23 @@
 #define NODE_H
 #include "common.h"
 #include "journey.h"
+#include "response.h"
 #include "util.h"
 #include <algorithm>
+#include <arpa/inet.h>
+#include <fcntl.h>
 #include <iomanip>
 #include <iostream>
 #include <locale>
-#include <sstream>
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 
-class Node {
+class Node
+{
 public:
   string name;
   uint16_t udp_port;
@@ -23,8 +28,7 @@ public:
   int udp_socket;
   int tcp_socket;
   map<int, int> response_sockets;
-  vector<int>
-      outstanding_frames; // TODO: change to Response objects when implemented
+  list<class Response> outstanding_frames;
   int seqno;
   vector<int> input_sockets;
   map<string, list<class Journey>> timetables;

@@ -59,8 +59,13 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
       out_frame.time = next_journey->arrival_time;
       string out_str = out_frame.to_string();
       to.sin_port = htons(neighbour.first);
-      sendto(this_node.udp_socket, out_str.c_str(), out_str.size(), 0,
-             (struct sockaddr *)&to, sizeof(to));
+      if (sendto(this_node.udp_socket, out_str.c_str(), out_str.size(), 0,
+                 (struct sockaddr *)&to, sizeof(to)) < 0) {
+        cout << "Failed to send frame to neighbour" << endl;
+        this_node.quit(1);
+      }
+      cout << this_node.name << " sent frame " << out_frame.to_string()
+           << " to " << neighbour.second << endl;
       ++sent_frames;
     }
     if (sent_frames == 0) {
@@ -94,13 +99,14 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
       }
     } else {
       // We need to keep a track of the frames we sent out
+      Response outstanding_response =
+          Response(sent_frames, &out_frame, -1, string());
+      this_node.outstanding_frames.push_back(outstanding_response);
     }
   }
-  return;
 }
 
 void process_udp(Node &this_node, string &transmission, uint16_t port) {
-  cout << "Received UDP packet from port " << port << endl;
   Frame in_frame = Frame();
   in_frame.from_string(transmission);
   this_node.check_timetable();

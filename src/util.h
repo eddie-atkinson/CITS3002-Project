@@ -2,7 +2,6 @@
 #define UTIL_H
 #include "common.h"
 #include "journey.h"
-#include <sstream>
 #include <string.h>
 #include <time.h>
 list<string> split(const string &s, char delimiter);

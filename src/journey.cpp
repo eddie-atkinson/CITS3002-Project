@@ -1,6 +1,6 @@
 #include "journey.h"
 
-Journey::Journey(const string& in_str): string_rep(in_str) {
+Journey::Journey(const string &in_str) : string_rep(in_str) {
   string temp_str = string_rep;
   list<string> tokens = split(temp_str, ',');
   int minutes = -1;
@@ -26,11 +26,12 @@ Journey::Journey(const string& in_str): string_rep(in_str) {
 }
 
 string Journey::to_string() const {
-  std::ostringstream ss;
+  ostringstream ss;
   ss << "String representation: " << string_rep << endl
      << "Destination: " << destination << endl
      << "Departure time: " << departure_time << endl
-     << "Arrival time: " << arrival_time << endl << endl;
-      
+     << "Arrival time: " << arrival_time << endl
+     << endl;
+
   return ss.str();
 }
