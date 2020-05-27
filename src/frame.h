@@ -7,16 +7,16 @@
 
 class Frame {
 public:
-    string origin;
-    string dest;
-    list<string> src;
-    int seqno;
-    time_t time;
-    FrameType type;
-    Frame();
-    Frame(string origin, string dest, list<string>& src, int seqno, time_t time,
+  string origin;
+  string dest;
+  list<string> src;
+  int seqno;
+  time_t time;
+  FrameType type;
+  Frame();
+  Frame(string origin, string dest, list<string> &src, int seqno, time_t time,
         FrameType type);
-    string to_string();
-    void from_string(string& in_str);
+  string to_string();
+  void from_string(string &in_str);
 };
 #endif
