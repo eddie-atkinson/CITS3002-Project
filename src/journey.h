@@ -9,11 +9,11 @@
 
 class Journey {
 public:
-  string string_rep;
-  string destination;
-  int departure_time;
-  int arrival_time;
-  Journey(const string &in_str);
-  string to_string() const;
+    string string_rep;
+    string destination;
+    int departure_time;
+    int arrival_time;
+    Journey(const string& in_str);
+    string to_string() const;
 };
 #endif

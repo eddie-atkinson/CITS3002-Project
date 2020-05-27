@@ -22,10 +22,26 @@ void process_request_frame(Node &this_node, Frame &in_frame)
     struct sockaddr_in to;
     to.sin_family = AF_INET;
     to.sin_port = htons(out_port);
-    to.sin_addr.s_addr = HOST;
+    inet_pton(AF_INET, HOST_IP, &(to.sin_addr));
 
     sendto(this_node.udp_socket, response_str.c_str(), len, 0,
            (struct sockaddr *)&to, sizeof(to));
+  }
+  else if (std::find(in_frame.src.begin(), in_frame.src.end(), this_node.name) == in_frame.src.end())
+  {
+    send_frame_to_neighbours(this_node, in_frame);
+  }
+  else
+  {
+    // We have a cycle
+    in_frame.src.push_back(this_node.name);
+    Frame response_frame = Frame(
+        in_frame.dest,
+        in_frame.origin,
+        in_frame.src,
+        in_frame.seqno,
+        -1,
+        RESPONSE);
   }
 }
 
@@ -36,7 +52,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame)
   int sent_frames = 0;
   struct sockaddr_in to;
   to.sin_family = AF_INET;
-  to.sin_addr.s_addr = HOST;
+  inet_pton(AF_INET, HOST_IP, &(to.sin_addr));
   string &sender_name = out_frame.src.back();
   out_frame.src.push_back(this_node.name);
   int start_time;
@@ -59,8 +75,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame)
     if (src_set.find(neighbour.second) == src_set.end())
     {
       // We haven't sent the frame here before
-      Journey *next_journey =
-          this_node.find_next_trip(neighbour.second, start_time);
+      Journey *next_journey = this_node.find_next_trip(neighbour.second, start_time);
       if (next_journey == NULL)
       {
         // Don't send frame if we can't get there today
@@ -89,8 +104,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame)
             {"Arrival time at destination: Couldn't get there",
              "Next leg of trip: None"});
         string http_response = http_string(200, "OK", http_strings);
-        if (send(out_socket, http_response.c_str(), http_response.size(), 0) <
-            0)
+        if (send(out_socket, http_response.c_str(), http_response.size(), 0) < 0)
         {
           cout << "Failed to send a frame, exiting" << endl;
           this_node.quit(1);
@@ -100,9 +114,8 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame)
       else
       {
         // Sending a response to the guy who sent it to us
-        Frame response_frame =
-            Frame(out_frame.dest, out_frame.origin, out_frame.src,
-                  out_frame.seqno, -1, RESPONSE);
+        Frame response_frame = Frame(out_frame.dest, out_frame.origin, out_frame.src,
+                                     out_frame.seqno, -1, RESPONSE);
         uint16_t out_port = this_node.get_port_from_name(sender_name);
         to.sin_port = htons(out_port);
         string response_str = response_frame.to_string();
@@ -118,8 +131,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame)
     else
     {
       // We need to keep a track of the frames we sent out
-      Response outstanding_response =
-          Response(sent_frames, &out_frame, -1, string());
+      Response outstanding_response = Response(sent_frames, &out_frame, -1, string());
       this_node.outstanding_frames.push_back(outstanding_response);
     }
   }
