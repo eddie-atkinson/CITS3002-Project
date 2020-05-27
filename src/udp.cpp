@@ -199,7 +199,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
       string http_response = http_string(200, "OK", http_strings);
       if (send(out_socket, http_response.c_str(), http_response.size(), 0) <
           0) {
-        cout << "Failed to send a frame, exiting" << endl;
+        cout << "Failed to send a browser rejection, exiting" << endl;
         this_node.quit(1);
       }
       this_node.remove_socket(out_socket);
