@@ -25,7 +25,11 @@ void init_ports(Node &this_node)
     cout << "Failed to allocate TCP socket, exiting" << endl;
     exit(1);
   }
-
+  if (fcntl(this_node.tcp_socket, F_SETFL, O_NONBLOCK) != 0)
+  {
+    cout << "TCP socket failed to set non-blocking, exiting" << endl;
+    this_node.quit(1);
+  }
   tcpaddr.sin_family = AF_INET;
   tcpaddr.sin_port = htons(this_node.tcp_port);
   tcpaddr.sin_addr.s_addr = HOST;
@@ -39,38 +43,33 @@ void init_ports(Node &this_node)
     this_node.quit(1);
   }
 
-  if (listen(this_node.tcp_socket, 5) != 0)
+  if (listen(this_node.tcp_socket, 1) != 0)
   {
     cout << "TCP socket failed to listen, exiting" << endl;
     this_node.quit(1);
   }
-  if (fcntl(this_node.tcp_socket, F_SETFL, O_NONBLOCK) != 0)
-  {
-    cout << "TCP socket failed to set non-blocking, exiting" << endl;
-    this_node.quit(1);
-  }
+
   udpaddr.sin_family = AF_INET;
   udpaddr.sin_port = htons(this_node.udp_port);
   udpaddr.sin_addr.s_addr = HOST;
 
   this_node.udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
+
   if (this_node.udp_socket < 0)
   {
     cout << "Failed to allocate UDP socket, exiting" << endl;
     this_node.quit(1);
   }
-
+  if (fcntl(this_node.udp_socket, F_SETFL, O_NONBLOCK) != 0)
+  {
+    cout << "UDP socket failed to set non-blocking, exiting" << endl;
+    this_node.quit(1);
+  }
   result = bind(this_node.udp_socket, (struct sockaddr *)&udpaddr,
                 sizeof(struct sockaddr_in));
   if (result < 0)
   {
     cout << "Failed to bind UDP socket, exiting" << endl;
-    this_node.quit(1);
-  }
-
-  if (fcntl(this_node.udp_socket, F_SETFL, O_NONBLOCK) != 0)
-  {
-    cout << "UDP socket failed to set non-blocking, exiting" << endl;
     this_node.quit(1);
   }
 
@@ -81,8 +80,9 @@ void init_ports(Node &this_node)
 
 void send_name_frames(Node &this_node)
 {
+  list<string> new_src;
   Frame name_frame =
-      Frame(this_node.name, "", list<string>(), -1, -1, NAME_FRAME);
+      Frame(this_node.name, "", new_src, -1, -1, NAME_FRAME);
   string frame_str = name_frame.to_string();
   size_t len = frame_str.size();
   struct sockaddr_in out_addr;
@@ -109,6 +109,7 @@ void handle_sockets(Node &this_node, fd_set *rfds)
   size_t len = MAX_PACKET_LEN;
   struct sockaddr_in from;
   socklen_t fromlen = sizeof(from);
+  bzero(&from, fromlen);
   ssize_t read;
   for (unsigned int i = 0; i < this_node.input_sockets.size(); ++i)
   {
@@ -166,42 +167,37 @@ void handle_sockets(Node &this_node, fd_set *rfds)
 
 void listen_on_ports(Node &this_node)
 {
-  this_node.input_sockets.push_back(this_node.tcp_socket);
-  this_node.input_sockets.push_back(this_node.udp_socket);
   struct timeval tv;
-  tv.tv_sec = 10;
-  tv.tv_usec = 0;
-  fd_set rfds;
+  fd_set read_fds;
   int fdsready;
   int largestfd;
-  size_t nfds;
-  while (1)
+  while (true)
   {
+    FD_ZERO(&read_fds);
     tv.tv_sec = 10;
     tv.tv_usec = 0;
     fdsready = 0;
     largestfd = -1;
-    nfds = this_node.input_sockets.size();
-    // Refresh the set of fds being watched
-    FD_ZERO(&rfds);
-    for (size_t i = 0; i < nfds; ++i)
+    for (auto socket : this_node.input_sockets)
     {
-      int socket = this_node.input_sockets.at(i);
       if (socket > largestfd)
       {
         largestfd = socket;
       }
-      FD_SET(socket, &rfds);
+      FD_SET(socket, &read_fds);
     }
-    fdsready = select(largestfd + 1, &rfds, NULL, NULL, &tv);
-    if (fdsready == -1)
+    fdsready = select(largestfd + 1, &read_fds, NULL, NULL, &tv);
+    switch (fdsready)
     {
-      cout << "Error in select, exiting" << endl;
+    case (-1):
+      cout << "Error with select, exiting" << endl;
       this_node.quit(1);
-    }
-    else if (fdsready > 0)
-    {
-      handle_sockets(this_node, &rfds);
+      break;
+    case (0):
+      break;
+    default:
+      handle_sockets(this_node, &read_fds);
+      break;
     }
   }
 }
@@ -216,7 +212,8 @@ int main(int argc, char *argv[])
   Node this_node = parse_args(argc, argv);
   cout << "Node: " << this_node.name << " running with PID " << getpid()
        << endl;
-  init_ports(this_node);
+  this_node.init_ports();
+  // init_ports(this_node);
   send_name_frames(this_node);
   listen_on_ports(this_node);
   return 0;

@@ -21,11 +21,12 @@ void handle_tcp(Node &this_node, string &message, int socket)
   size_t pos = destination.find("=");
   // Trim off prefix
   destination.erase(0, pos + 1);
-
-  Frame request_frame = Frame(this_node.name, destination, list<string>(),
+  list<string> new_src;
+  Frame request_frame = Frame(this_node.name, destination, new_src,
                               this_node.seqno, -1, REQUEST);
   this_node.response_sockets[this_node.seqno] = socket;
   this_node.seqno = (this_node.seqno + 1) % MAX_INT;
   this_node.check_timetable();
+
   send_frame_to_neighbours(this_node, request_frame);
 }

@@ -6,6 +6,61 @@ Node::Node()
   last_timetable_check = -1;
 }
 
+void Node::init_ports()
+{
+  init_tcp();
+  init_udp();
+  sleep(5);
+  cout << "You can send frames now" << endl;
+}
+
+void Node::init_tcp()
+{
+  struct sockaddr_in addr;
+  tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
+  if (fcntl(tcp_socket, F_SETFL, O_NONBLOCK) < 0)
+  {
+    cout << "Failed to set TCP socket non-binding, exiting" << endl;
+    quit(1);
+  }
+  bzero(&addr, sizeof(struct sockaddr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(tcp_port);
+  inet_pton(AF_INET, HOST_IP, &(addr.sin_addr));
+  if (bind(tcp_socket, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+  {
+    cout << "Failed to bind TCP socket, exiting" << endl;
+    quit(1);
+  }
+  if (listen(tcp_socket, 5) < 0)
+  {
+    cout << "TCP socket failed to listen" << endl;
+    quit(1);
+  }
+  input_sockets.push_back(tcp_socket);
+}
+
+void Node::init_udp()
+{
+  struct sockaddr_in addr;
+  udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
+  if (fcntl(udp_socket, F_SETFL, O_NONBLOCK) < 0)
+  {
+    cout << "Failed to set UDP socket non-binding, exiting" << endl;
+    quit(1);
+  }
+  bzero(&addr, sizeof(struct sockaddr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(udp_port);
+  inet_pton(AF_INET, HOST_IP, &(addr.sin_addr));
+  if (bind(udp_socket, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+  {
+    cout << "Failed to bind TCP socket, exiting" << endl;
+    quit(1);
+  }
+  input_sockets.push_back(udp_socket);
+}
+
 void Node::quit(int status)
 {
   // Add colour to output to notice errors more easily

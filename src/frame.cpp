@@ -1,18 +1,21 @@
 #include "frame.h"
-Frame::Frame(string origin, string dest, list<string> src, int seqno,
+Frame::Frame(string origin, string dest, list<string> &src, int seqno,
              time_t time, FrameType type)
     : origin(origin), dest(dest), src(src), seqno(seqno), time(time),
       type(type) {}
 
 Frame::Frame() {}
 
-string Frame::to_string() {
+string Frame::to_string()
+{
   ostringstream src_string;
   ostringstream main_string;
   list<string>::iterator it;
-  for (it = src.begin(); it != src.end(); ++it) {
+  for (it = src.begin(); it != src.end(); ++it)
+  {
     src_string << *it;
-    if (it != --src.end()) {
+    if (it != --src.end())
+    {
       src_string << ".";
     }
   }
@@ -25,7 +28,8 @@ string Frame::to_string() {
   return main_string.str();
 }
 
-void Frame::from_string(string &in_str) {
+void Frame::from_string(string &in_str)
+{
   map<string, string> tokens;
   string delimiter = ",";
   string inner_delimiter = ":";
@@ -34,7 +38,8 @@ void Frame::from_string(string &in_str) {
   string value;
   size_t pos = 0;
   size_t inner_pos;
-  while ((pos = in_str.find(delimiter)) != string::npos) {
+  while ((pos = in_str.find(delimiter)) != string::npos)
+  {
     inner_pos = 0;
     token = in_str.substr(0, pos);
     inner_pos = token.find(inner_delimiter);
@@ -54,22 +59,31 @@ void Frame::from_string(string &in_str) {
   in_str.erase(0, pos + delimiter.length());
 
   string src_string;
-  try {
+  try
+  {
     origin = tokens.at("origin");
     dest = tokens.at("dest");
     seqno = atoi(tokens.at("seqno").c_str());
     time = atoi(tokens.at("time").c_str());
     type = static_cast<FrameType>(atoi(tokens.at("type").c_str()));
     src_string = tokens.at("src");
-  } catch (const std::out_of_range &oor) {
+  }
+  catch (const std::out_of_range &oor)
+  {
     cout << "Parsing frame failed, exiting" << endl;
+    fflush(stdout);
     exit(1);
   }
   string src_delimiter = ".";
   pos = 0;
-  while ((pos = src_string.find(src_delimiter)) != string::npos) {
-    string token = src_string.substr(0, pos);
+  while ((pos = src_string.find(src_delimiter)) != string::npos)
+  {
+    token = src_string.substr(0, pos);
     src.push_back(token);
     src_string.erase(0, pos + delimiter.length());
   }
+  // One last time for the final name in the string
+  token = src_string.substr(0, pos);
+  src.push_back(token);
+  src_string.erase(0, pos + delimiter.length());
 }

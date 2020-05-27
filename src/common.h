@@ -17,6 +17,7 @@ using std::string;
 using std::vector;
 #define MAX_INT 4294967295 // 2^32 - 1
 #define MAX_PACKET_LEN 1024
-#define HOST 0 // localhost
+#define HOST 0				// localhost
+#define HOST_IP "127.0.0.1" // localhost
 #define SECONDS_IN_DAY (time_t)86400
 #endif
