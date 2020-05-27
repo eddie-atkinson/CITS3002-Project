@@ -39,6 +39,7 @@ public:
   uint16_t get_port_from_name(string &node_name);
   void init_ports();
   class Journey *find_next_trip(string &node_name, int start_time);
+  void send_udp(uint16_t port, string &transmission);
 
 private:
   void init_tcp();

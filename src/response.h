@@ -8,10 +8,12 @@
 class Response {
 public:
   int remaining_responses;
-  class Frame *frame;
+  string sender;
+  string origin;
+  int seqno;
   int time;
   string stop;
-  Response(int remaining_responses, Frame *frame, int time, string stop);
+  Response(int remaining_responses, string &sender, string &origin, int seqno);
   string to_string();
 };
 #endif

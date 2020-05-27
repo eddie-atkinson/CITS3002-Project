@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+using std::cerr;
 using std::cout;
 using std::endl;
 using std::list;

@@ -3,6 +3,7 @@
 Node::Node() {
   seqno = 0;
   last_timetable_check = -1;
+  outstanding_frames = list<class Response>();
 }
 
 void Node::init_ports() {
@@ -134,4 +135,16 @@ class Journey *Node::find_next_trip(string &node_name, int start_time) {
     }
   }
   return next_journey;
+}
+
+void Node::send_udp(uint16_t port, string &transmission) {
+  struct sockaddr_in to;
+  to.sin_family = AF_INET;
+  inet_pton(AF_INET, HOST_IP, &(to.sin_addr));
+  to.sin_port = htons(port);
+  if (sendto(udp_socket, transmission.c_str(), transmission.size(), 0,
+             (struct sockaddr *)&to, sizeof(to)) < 0) {
+    cout << "Failed to send frame to neighbour" << endl;
+    quit(1);
+  }
 }

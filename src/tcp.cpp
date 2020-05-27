@@ -1,6 +1,7 @@
 #include "tcp.h"
 
 void handle_tcp(Node &this_node, string &message, int socket) {
+  cout << "Handling TCP" << endl;
   std::regex reg_str("to=\\w+");
   std::smatch match;
   std::regex_search(message, match, reg_str);
