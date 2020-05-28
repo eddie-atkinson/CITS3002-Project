@@ -76,7 +76,7 @@ def listen_on_ports(this_node: Node) -> None:
 
     this_node.input_sockets = [this_node.tcp_socket, this_node.udp_socket]
     while True:
-        readers = select.select(this_node.input_sockets, [], [])[0]
+        readers = select.select(this_node.input_sockets, [], [], 5.0)[0]
         for reader in readers:
             if reader is this_node.udp_socket:
                 # Do something
