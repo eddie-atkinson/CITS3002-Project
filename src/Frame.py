@@ -16,13 +16,7 @@ class Frame:
     type: FrameType
 
     def __init__(
-        self,
-        origin="",
-        dest="",
-        src=[],
-        seqno=-1,
-        time=-1,
-        type=-1,
+        self, origin="", dest="", src=[], seqno=-1, time=-1, type=-1,
     ):
         self.origin = origin
         self.dest = dest

@@ -34,6 +34,7 @@ def main() -> None:
     this_node = parse_args()
     print(f"Node: {this_node.name} running with PID {os.getpid()}")
     init_ports(this_node)
+    this_node.check_kill()
     send_name_frames(this_node)
     listen_on_ports(this_node)
 
@@ -57,15 +58,9 @@ def init_ports(this_node: Node) -> None:
     print("You can send frames now")
 
 
-
 def send_name_frames(this_node: Node) -> None:
     name_frame = Frame(
-        this_node.name,
-        "",
-        [this_node.name],
-        -1,
-        -1,
-        FrameType.NAME_FRAME
+        this_node.name, "", [this_node.name], -1, -1, FrameType.NAME_FRAME
     )
     for port in this_node.neighbours.keys():
         this_node.udp_socket.sendto(name_frame.to_bytes(), (HOST, port))
@@ -75,6 +70,7 @@ def listen_on_ports(this_node: Node) -> None:
 
     this_node.input_sockets = [this_node.tcp_socket, this_node.udp_socket]
     while True:
+        this_node.check_kill()
         readers = select.select(this_node.input_sockets, [], [], 5.0)[0]
         for reader in readers:
             if reader is this_node.udp_socket:
@@ -113,13 +109,9 @@ def parse_args() -> Node:
     while args:
         neighbours[int(args.pop(0))] = ""
 
-    this_node = Node(
-        name,
-        neighbours,
-        tcp_port,
-        udp_port
-    )
+    this_node = Node(name, neighbours, tcp_port, udp_port)
     return this_node
+
 
 def exit_gracefully(sig, frame) -> None:
     print("Interrupt: exiting gracefully")

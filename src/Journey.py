@@ -1,5 +1,6 @@
 import time
 
+
 class Journey:
     string_rep: str
     destination: str

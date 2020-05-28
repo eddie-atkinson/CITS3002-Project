@@ -1,8 +1,9 @@
-import time 
+import time
 import os
 import sys
 from Journey import Journey
 from Node import Node
+
 
 def check_timetable(this_node: Node) -> None:
     file_name = f"tt-{this_node.name}"
@@ -10,7 +11,6 @@ def check_timetable(this_node: Node) -> None:
         stat_info = os.stat(file_name)
         if stat_info.st_mtime > this_node.last_timetable_check:
             print(f"{this_node.name} refreshing timetable")
-            last_check = int(time.time())
             # Clear all the old entries
             this_node.timetables.clear()
 
@@ -34,7 +34,8 @@ def check_timetable(this_node: Node) -> None:
 
     except FileNotFoundError:
         print(f"{file_name} for node {this_node.name} not found, exiting")
-        sys.exit(0)
+        this_node.quit(1)
+
 
 def find_next_trip(timetable: list, start_time: int) -> Journey:
     next_journey = None
@@ -43,4 +44,3 @@ def find_next_trip(timetable: list, start_time: int) -> Journey:
             next_journey = journey
             break
     return next_journey
-
