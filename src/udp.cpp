@@ -37,6 +37,7 @@ void process_request_frame(Node &this_node, Frame &in_frame) {
 void process_response_frame(Node &this_node, Frame &in_frame) {
   cout << this_node.name << " received response " << in_frame.to_string()
        << " from " << in_frame.src.back() << endl;
+  // Remember who sent us the response
   string src_node = in_frame.src.back();
   in_frame.src.pop_back();
   // Take ourselves out of the src
@@ -103,6 +104,7 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
       this_node.send_udp(out_port, response_str);
     }
     // Remove response object from outstanding_frame
+    this_node.remove_outstanding_frame(resp_obj);
   }
 }
 

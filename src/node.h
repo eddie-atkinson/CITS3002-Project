@@ -32,6 +32,7 @@ public:
   vector<int> input_sockets;
   map<string, list<class Journey>> timetables;
   time_t last_timetable_check;
+  // Public methods
   Node(void);
   void check_timetable(void);
   void quit(int status);
@@ -43,6 +44,7 @@ public:
   void send_udp(uint16_t port, string &transmission);
   void send_tcp(int fd, string &transmission);
   Response *find_response_obj(string &dest, int seqno, string &sender);
+  void remove_outstanding_frame(Response *resp_ptr);
 
 private:
   void init_tcp();

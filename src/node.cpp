@@ -183,3 +183,17 @@ Response *Node::find_response_obj(string &dest, int seqno, string &sender) {
   }
   return resp_obj;
 }
+
+void Node::remove_outstanding_frame(Response *resp_ptr) {
+  list<Response>::iterator iter;
+  for (iter = outstanding_frames.begin(); iter != outstanding_frames.end();
+       ++iter) {
+    bool match = resp_ptr->origin == iter->origin &&
+                 resp_ptr->seqno == iter->seqno &&
+                 resp_ptr->sender == iter->sender;
+    if (match) {
+      outstanding_frames.erase(iter);
+      return;
+    }
+  }
+}
