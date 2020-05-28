@@ -14,6 +14,7 @@ public:
   int departure_time;
   int arrival_time;
   Journey(const string &in_str);
+  Journey();
   string to_string() const;
 };
 #endif

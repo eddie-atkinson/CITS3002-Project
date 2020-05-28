@@ -1,7 +1,6 @@
 #include "tcp.h"
 
 void handle_tcp(Node &this_node, string &message, int socket) {
-  cout << "Handling TCP" << endl;
   std::regex reg_str("to=\\w+");
   std::smatch match;
   std::regex_search(message, match, reg_str);
@@ -15,6 +14,7 @@ void handle_tcp(Node &this_node, string &message, int socket) {
       this_node.quit(1);
     }
     this_node.remove_socket(socket);
+    return;
   }
   size_t pos = destination.find("=");
   // Trim off prefix

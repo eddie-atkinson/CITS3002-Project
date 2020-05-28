@@ -1,6 +1,6 @@
 #include "frame.h"
-Frame::Frame(string origin, string dest, list<string> &src, int seqno,
-             time_t time, FrameType type)
+Frame::Frame(string origin, string dest, list<string> &src, int seqno, int time,
+             FrameType type)
     : origin(origin), dest(dest), src(src), seqno(seqno), time(time),
       type(type) {}
 

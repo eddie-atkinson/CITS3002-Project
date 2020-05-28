@@ -11,10 +11,10 @@ public:
   string dest;
   list<string> src;
   int seqno;
-  time_t time;
+  int time;
   FrameType type;
   Frame();
-  Frame(string origin, string dest, list<string> &src, int seqno, time_t time,
+  Frame(string origin, string dest, list<string> &src, int seqno, int time,
         FrameType type);
   string to_string();
   void from_string(string &in_str);

@@ -25,6 +25,14 @@ Journey::Journey(const string &in_str) : string_rep(in_str) {
   tokens.pop_front();
 }
 
+// No args constructor for indicating error state
+Journey::Journey() {
+  string_rep = "";
+  destination = "Nowhere";
+  departure_time = -1;
+  arrival_time = -1;
+}
+
 string Journey::to_string() const {
   ostringstream ss;
   ss << "String representation: " << string_rep << endl

@@ -56,12 +56,6 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
   list<class Response>::iterator resp;
   for (resp = this_node.outstanding_frames.begin();
        resp != this_node.outstanding_frames.end(); ++resp) {
-    // cout << "Resp origin: " << resp->origin << endl;
-    // cout << "in frame dest: " << in_frame.dest << endl;
-    // cout << "Resp seqno " << resp->seqno << endl;
-    // cout << "In frame seqno " << in_frame.seqno << endl;
-    // cout << "Resp sender " << resp->sender << endl;
-    // cout << "in frame sender" << in_frame.src.back() << endl;
     if (resp->origin == in_frame.dest && resp->seqno == in_frame.seqno &&
         resp->sender == in_frame.src.back()) {
       resp_obj = &(*resp);
@@ -86,35 +80,40 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
   if (resp_obj->remaining_responses == 0) {
     if (in_frame.dest == this_node.name) {
       cout << "End of the line, respond to TCP socket" << endl;
-      string arrival_time;
-      string itinerary;
+      ostringstream arrival_time;
+      // string arrival_time;
+      // string itinerary;
+      ostringstream itinerary;
+      arrival_time << "Arrival Time: ";
+      itinerary << "Next leg of trip: ";
       if (resp_obj->time < 0) {
         // We couldn't get there
-        arrival_time = "Couldn't get there";
-        itinerary = "None";
+        arrival_time << "couldn't get there";
+        itinerary << "None";
       } else {
-        // time_t epoch_time = time(NULL);
-        // struct tm *current_time = localtime(&epoch_time);
-        // int start_time = (current_time->tm_hour * 60) + current_time->tm_min;
-        // Journey *next_journey =
-        // this_node.find_next_trip(resp_obj->stop, start_time);
+        time_t epoch_time = time(NULL);
+        struct tm *current_time = localtime(&epoch_time);
+        int start_time = (current_time->tm_hour * 60) + current_time->tm_min;
+        string next_journey =
+            this_node.find_itinerary(resp_obj->stop, start_time);
+        if (next_journey.size() == 0) {
+          cout << "Couldn't find itinerary to return, exiting" << endl;
+          this_node.quit(1);
+        }
         int hours = resp_obj->time / 60;
         int minutes = resp_obj->time % 60;
         cout << "Hours: " << hours << endl;
         cout << "Minutes: " << minutes << endl;
-        ostringstream ss;
-        ss << hours << ":";
+        arrival_time << hours << ":";
         if (minutes < 10) {
-          ss << "0" << minutes;
+          arrival_time << "0" << minutes;
         } else {
-          ss << minutes;
+          arrival_time << minutes;
         }
-        arrival_time = ss.str();
-        itinerary = "";
-        // itinerary = next_journey->string_rep;
+        itinerary << next_journey;
         cout << "Still here" << endl;
       }
-      list<string> http_lines({arrival_time, itinerary});
+      list<string> http_lines({arrival_time.str(), itinerary.str()});
       string http_response = http_string(200, "OK", http_lines);
       int out_socket = this_node.response_sockets[resp_obj->seqno];
       if (send(out_socket, http_response.c_str(), http_response.size(), 0) <
@@ -154,7 +153,9 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   if (out_frame.time == -1) {
     time_t temp_time = time(NULL);
     struct tm *temp_struct = localtime(&temp_time);
+    cout << "Current time at " << this_node.name << " " << asctime(temp_struct);
     start_time = (temp_struct->tm_hour * 60) + temp_struct->tm_min;
+    cout << "Start time for " << this_node.name << " " << start_time << endl;
   } else {
     start_time = out_frame.time;
   }
@@ -167,14 +168,16 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
     if (src_set.find(neighbour.second) == src_set.end()) {
       // We haven't sent the frame here before
       cout << "Looking for journey for " << neighbour.second << endl;
-      Journey *next_journey =
-          this_node.find_next_trip(neighbour.second, start_time);
-      if (next_journey == NULL) {
+      int arrival_time =
+          this_node.find_arrival_time(neighbour.second, start_time);
+      if (arrival_time == -1) {
         // Don't send frame if we can't get there today
         continue;
       }
-      cout << "Found journey for neighbour sending frame" << endl;
-      out_frame.time = next_journey->arrival_time;
+      cout << "Found journey for neighbour sending frame with arrival time "
+           << arrival_time << endl;
+      out_frame.time = arrival_time;
+      cout << out_frame.time << endl;
       string out_str = out_frame.to_string();
       to.sin_port = htons(neighbour.first);
       if (sendto(this_node.udp_socket, out_str.c_str(), out_str.size(), 0,

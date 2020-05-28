@@ -86,6 +86,7 @@ void Node::check_timetable(void) {
         continue;
       }
       Journey nxt_jrn = Journey(line);
+      cout << "Arrival time " << nxt_jrn.arrival_time << endl;
       if (timetables.find(nxt_jrn.destination) == timetables.end()) {
         timetables[nxt_jrn.destination] = list<class Journey>();
       }
@@ -121,20 +122,50 @@ uint16_t Node::get_port_from_name(string &node_name) {
   return -1;
 }
 
-class Journey *Node::find_next_trip(string &node_name, int start_time) {
+// class Journey &Node::find_next_trip(string &node_name, int start_time) {
+//   if (timetables.find(node_name) == timetables.end()) {
+//     cout << "Couldn't find timetable for " << node_name << " exiting" <<
+//     endl; quit(1);
+//   }
+//   list<class Journey> timetable = timetables[node_name];
+//   for (auto journey : timetable) {
+//     if (journey.departure_time > start_time) {
+//       return journey;
+//     }
+//   }
+//   return
+// }
+
+string Node::find_itinerary(string &node_name, int start_time) {
   if (timetables.find(node_name) == timetables.end()) {
     cout << "Couldn't find timetable for " << node_name << " exiting" << endl;
     quit(1);
   }
-  Journey *next_journey = NULL;
+  string itinerary;
   list<class Journey> timetable = timetables[node_name];
   for (auto journey : timetable) {
     if (journey.departure_time > start_time) {
-      next_journey = &journey;
+      itinerary = journey.string_rep;
       break;
     }
   }
-  return next_journey;
+  return itinerary;
+}
+
+int Node::find_arrival_time(string &node_name, int start_time) {
+  if (timetables.find(node_name) == timetables.end()) {
+    cout << "Couldn't find timetable for " << node_name << " exiting" << endl;
+    quit(1);
+  }
+  int arrival_time = -1;
+  list<class Journey> timetable = timetables[node_name];
+  for (auto journey : timetable) {
+    if (journey.departure_time > start_time) {
+      arrival_time = journey.arrival_time;
+      break;
+    }
+  }
+  return arrival_time;
 }
 
 void Node::send_udp(uint16_t port, string &transmission) {

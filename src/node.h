@@ -38,7 +38,9 @@ public:
   void remove_socket(int fd);
   uint16_t get_port_from_name(string &node_name);
   void init_ports();
-  class Journey *find_next_trip(string &node_name, int start_time);
+  class Journey &find_next_trip(string &node_name, int start_time);
+  int find_arrival_time(string &node_name, int start_time);
+  string find_itinerary(string &node_name, int start_time);
   void send_udp(uint16_t port, string &transmission);
 
 private:
