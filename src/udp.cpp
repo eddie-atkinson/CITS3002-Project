@@ -37,7 +37,6 @@ void process_request_frame(Node &this_node, Frame &in_frame) {
 void process_response_frame(Node &this_node, Frame &in_frame) {
   cout << this_node.name << " received response " << in_frame.to_string()
        << " from " << in_frame.src.back() << endl;
-  << this_node.outstanding_frames.size() << endl;
   string src_node = in_frame.src.back();
   in_frame.src.pop_back();
   // Take ourselves out of the src
