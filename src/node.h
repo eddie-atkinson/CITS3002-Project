@@ -7,6 +7,7 @@
 #include "util.h"
 #include <algorithm>
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <iomanip>
 #include <iostream>
@@ -33,8 +34,9 @@ public:
   map<string, list<class Journey>> timetables;
   time_t last_timetable_check;
   // Public methods
-  Node(void);
-  void check_timetable(void);
+  Node();
+  void check_timetable();
+  void check_kill();
   void quit(int status);
   void remove_socket(int fd);
   uint16_t get_port_from_name(string &node_name);

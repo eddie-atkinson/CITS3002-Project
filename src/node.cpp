@@ -1,9 +1,25 @@
 #include "node.h"
 
-Node::Node() {
+Node::Node(void) {
   seqno = 0;
   last_timetable_check = -1;
   outstanding_frames = list<class Response>();
+}
+
+void Node::check_kill() {
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir(".")) != NULL) {
+    while ((ent = readdir(dir)) != NULL) {
+      if (strcmp(ent->d_name, KILL_FILE) == 0) {
+        quit(0);
+      }
+    }
+    closedir(dir);
+  } else {
+    cout << "Failed to read file system, exiting" << endl;
+    quit(1);
+  }
 }
 
 void Node::init_ports() {
@@ -55,9 +71,18 @@ void Node::init_udp() {
 
 void Node::quit(int status) {
   // Add colour to output to notice errors more easily
-  cout << "\033[0;31m";
-  cout << "Closing sockets and getting out of here" << endl;
-  cout << "\033[0m";
+  if (status == 0) {
+    cout << ANSI_COLOR_GREEN;
+    cout << name << " received signal to exit, leaving gracefully" << endl;
+    cout << ANSI_COLOR_RESET;
+  } else {
+    cout << ANSI_COLOR_RED;
+    cout << name << " exited with error state" << endl;
+    cout << ANSI_COLOR_RESET;
+    // Create kill file,  to bring down the other servers
+    FILE *fp = fopen(KILL_FILE, "w");
+    fclose(fp);
+  }
   for (auto socket : input_sockets) {
     shutdown(socket, SHUT_RD);
     close(socket);
