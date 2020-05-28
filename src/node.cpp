@@ -25,7 +25,7 @@ void Node::init_tcp() {
   addr.sin_port = htons(tcp_port);
   inet_pton(AF_INET, HOST_IP, &(addr.sin_addr));
   if (bind(tcp_socket, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    cout << "Failed to bind TCP socket, exiting" << endl;
+    cout << "Failed to bind TCPc socket, is it still in use?" << endl;
     quit(1);
   }
   if (listen(tcp_socket, 5) < 0) {
@@ -47,7 +47,7 @@ void Node::init_udp() {
   addr.sin_port = htons(udp_port);
   inet_pton(AF_INET, HOST_IP, &(addr.sin_addr));
   if (bind(udp_socket, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    cout << "Failed to bind TCP socket, exiting" << endl;
+    cout << "Failed to bind UDP socket, is it still in use?" << endl;
     quit(1);
   }
   input_sockets.push_back(udp_socket);
@@ -121,20 +121,6 @@ uint16_t Node::get_port_from_name(string &node_name) {
   return -1;
 }
 
-// class Journey &Node::find_next_trip(string &node_name, int start_time) {
-//   if (timetables.find(node_name) == timetables.end()) {
-//     cout << "Couldn't find timetable for " << node_name << " exiting" <<
-//     endl; quit(1);
-//   }
-//   list<class Journey> timetable = timetables[node_name];
-//   for (auto journey : timetable) {
-//     if (journey.departure_time > start_time) {
-//       return journey;
-//     }
-//   }
-//   return
-// }
-
 string Node::find_itinerary(string &node_name, int start_time) {
   if (timetables.find(node_name) == timetables.end()) {
     cout << "Couldn't find timetable for " << node_name << " exiting" << endl;
@@ -154,7 +140,7 @@ string Node::find_itinerary(string &node_name, int start_time) {
 int Node::find_arrival_time(string &node_name, int start_time) {
   if (timetables.find(node_name) == timetables.end()) {
     cout << "Couldn't find timetable for " << node_name << " exiting" << endl;
-    quit(1);
+    return -1;
   }
   int arrival_time = -1;
   list<class Journey> timetable = timetables[node_name];

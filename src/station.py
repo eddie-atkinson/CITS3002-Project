@@ -21,7 +21,6 @@ import regex as re
 from Frame import Frame
 from FrameType import FrameType
 from Journey import Journey
-from constants import SECONDS_IN_DAY
 from constants import MAX_INT
 from constants import HOST
 from constants import MAX_PACKET_LEN

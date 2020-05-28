@@ -6,7 +6,6 @@ from Frame import Frame
 from timetable import check_timetable
 from timetable import find_next_trip
 from Journey import Journey
-from constants import SECONDS_IN_DAY
 from constants import HOST
 from util import get_port_from_name
 from util import http_string

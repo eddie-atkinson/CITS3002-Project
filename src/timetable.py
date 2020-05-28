@@ -3,7 +3,6 @@ import os
 import sys
 from Journey import Journey
 from Node import Node
-from constants import SECONDS_IN_DAY
 
 def check_timetable(this_node: Node) -> None:
     file_name = f"tt-{this_node.name}"
