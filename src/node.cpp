@@ -25,7 +25,7 @@ void Node::init_tcp() {
   addr.sin_port = htons(tcp_port);
   inet_pton(AF_INET, HOST_IP, &(addr.sin_addr));
   if (bind(tcp_socket, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    cout << "Failed to bind TCPc socket, is it still in use?" << endl;
+    cout << "Failed to bind TCP socket, is it still in use?" << endl;
     quit(1);
   }
   if (listen(tcp_socket, 5) < 0) {
@@ -170,4 +170,16 @@ void Node::send_tcp(int fd, string &transmission) {
     cout << "Failed to send a browser rejection, exiting" << endl;
     quit(1);
   }
+}
+
+Response *Node::find_response_obj(string &dest, int seqno, string &sender) {
+  Response *resp_obj = NULL;
+  for (auto &resp : outstanding_frames) {
+    bool token_match = resp.origin == dest && resp.seqno == seqno;
+    if (token_match && (resp.sender == sender || dest == name)) {
+      resp_obj = &resp;
+      break;
+    }
+  }
+  return resp_obj;
 }

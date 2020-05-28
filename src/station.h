@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <netinet/in.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>

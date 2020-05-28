@@ -123,7 +123,6 @@ int main(int argc, char *argv[]) {
   cout << "Node: " << this_node.name << " running with PID " << getpid()
        << endl;
   this_node.init_ports();
-  // init_ports(this_node);
   send_name_frames(this_node);
   listen_on_ports(this_node);
   return 0;

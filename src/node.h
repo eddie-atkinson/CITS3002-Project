@@ -42,6 +42,7 @@ public:
   string find_itinerary(string &node_name, int start_time);
   void send_udp(uint16_t port, string &transmission);
   void send_tcp(int fd, string &transmission);
+  Response *find_response_obj(string &dest, int seqno, string &sender);
 
 private:
   void init_tcp();

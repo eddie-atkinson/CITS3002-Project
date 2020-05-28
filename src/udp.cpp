@@ -37,26 +37,13 @@ void process_request_frame(Node &this_node, Frame &in_frame) {
 void process_response_frame(Node &this_node, Frame &in_frame) {
   cout << this_node.name << " received response " << in_frame.to_string()
        << " from " << in_frame.src.back() << endl;
-  cout << "Number of response objects we have "
-       << this_node.outstanding_frames.size() << endl;
+  << this_node.outstanding_frames.size() << endl;
   string src_node = in_frame.src.back();
   in_frame.src.pop_back();
   // Take ourselves out of the src
   in_frame.src.pop_back();
-  Response *resp_obj = NULL;
-  list<class Response>::iterator resp;
-  for (resp = this_node.outstanding_frames.begin();
-       resp != this_node.outstanding_frames.end(); ++resp) {
-    cout << resp->to_string() << endl;
-    bool token_match =
-        resp->origin == in_frame.dest && resp->seqno == in_frame.seqno;
-
-    if (token_match && (resp->sender == in_frame.src.back() ||
-                        in_frame.dest == this_node.name)) {
-      resp_obj = &(*resp);
-      break;
-    }
-  }
+  Response *resp_obj = this_node.find_response_obj(
+      in_frame.dest, in_frame.seqno, in_frame.src.back());
   if (resp_obj == NULL) {
     cout << "Couldn't find response object for frame " << in_frame.to_string()
          << endl;
@@ -76,8 +63,6 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
     if (in_frame.dest == this_node.name) {
       cout << "End of the line, respond to TCP socket" << endl;
       ostringstream arrival_time;
-      // string arrival_time;
-      // string itinerary;
       ostringstream itinerary;
       arrival_time << "Arrival Time: ";
       itinerary << "Next leg of trip: ";
@@ -86,9 +71,7 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
         arrival_time << "couldn't get there";
         itinerary << "None";
       } else {
-        time_t epoch_time = time(NULL);
-        struct tm *current_time = localtime(&epoch_time);
-        int start_time = (current_time->tm_hour * 60) + current_time->tm_min;
+        int start_time = current_time();
         string next_journey =
             this_node.find_itinerary(resp_obj->stop, start_time);
         if (next_journey.size() == 0) {
@@ -125,7 +108,6 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
 }
 
 void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
-  cout << "sending frame to neighbours" << endl;
   int sent_frames = 0;
   uint16_t out_port;
   string sender_name;
@@ -154,8 +136,6 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
         // Don't send frame if we can't get there today
         continue;
       }
-      cout << "Found journey for neighbour sending frame with arrival time "
-           << arrival_time << endl;
       out_frame.time = arrival_time;
       string out_str = out_frame.to_string();
       this_node.send_udp(neighbour.first, out_str);
@@ -165,10 +145,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
       sent_frames = sent_frames + 1;
     }
   }
-  cout << this_node.name << " has sent " << sent_frames << " frames" << endl;
-
   if (sent_frames == 0) {
-    cout << "Sent 0 frames origin of frame is " << out_frame.origin << endl;
     if (out_frame.origin == this_node.name) {
       // We can't get anywhere today, respond to browser
       cout << "Sending rejection to browser" << endl;
@@ -180,7 +157,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
       this_node.send_tcp(out_socket, http_response);
       this_node.remove_socket(out_socket);
     } else {
-      // Sending a response to the guy who sent it to us
+      // Sending a response to the node who sent it to us
       Frame response_frame =
           Frame(out_frame.dest, out_frame.origin, out_frame.src,
                 out_frame.seqno, -1, RESPONSE);
@@ -200,11 +177,6 @@ void process_udp(Node &this_node, string &transmission, uint16_t port) {
   Frame in_frame = Frame();
   in_frame.from_string(transmission);
   this_node.check_timetable();
-  // for(auto neighbour: this_node.timetables) {
-  //   for(auto journey: neighbour.second) {
-  //     cout << journey.to_string() << endl;
-  //   }
-  // }
   if (in_frame.type == NAME_FRAME) {
     this_node.neighbours[port] = in_frame.origin;
   } else if (in_frame.type == REQUEST) {
