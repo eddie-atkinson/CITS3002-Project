@@ -42,6 +42,7 @@ public:
   int find_arrival_time(string &node_name, int start_time);
   string find_itinerary(string &node_name, int start_time);
   void send_udp(uint16_t port, string &transmission);
+  void send_tcp(int fd, string &transmission);
 
 private:
   void init_tcp();

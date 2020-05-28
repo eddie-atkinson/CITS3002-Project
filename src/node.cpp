@@ -179,3 +179,10 @@ void Node::send_udp(uint16_t port, string &transmission) {
     quit(1);
   }
 }
+
+void Node::send_tcp(int fd, string &transmission) {
+  if (send(fd, transmission.c_str(), transmission.size(), 0) < 0) {
+    cout << "Failed to send a browser rejection, exiting" << endl;
+    quit(1);
+  }
+}

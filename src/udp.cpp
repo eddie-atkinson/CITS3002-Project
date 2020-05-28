@@ -116,11 +116,7 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
       list<string> http_lines({arrival_time.str(), itinerary.str()});
       string http_response = http_string(200, "OK", http_lines);
       int out_socket = this_node.response_sockets[resp_obj->seqno];
-      if (send(out_socket, http_response.c_str(), http_response.size(), 0) <
-          0) {
-        cout << "Error in sending TCP response, exiting" << endl;
-        this_node.quit(1);
-      }
+      this_node.send_tcp(out_socket, http_response);
       this_node.remove_socket(out_socket);
     } else {
       uint16_t out_port = this_node.get_port_from_name(in_frame.src.back());
@@ -139,9 +135,7 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
 void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   cout << "sending frame to neighbours" << endl;
   int sent_frames = 0;
-  struct sockaddr_in to;
-  to.sin_family = AF_INET;
-  inet_pton(AF_INET, HOST_IP, &(to.sin_addr));
+  uint16_t out_port;
   string sender_name;
   if (out_frame.origin == this_node.name) {
     sender_name = this_node.name;
@@ -151,10 +145,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   out_frame.src.push_back(this_node.name);
   int start_time;
   if (out_frame.time == -1) {
-    time_t temp_time = time(NULL);
-    struct tm *temp_struct = localtime(&temp_time);
-    cout << "Current time at " << this_node.name << " " << asctime(temp_struct);
-    start_time = (temp_struct->tm_hour * 60) + temp_struct->tm_min;
+    start_time = current_time();
     cout << "Start time for " << this_node.name << " " << start_time << endl;
   } else {
     start_time = out_frame.time;
@@ -177,19 +168,15 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
       cout << "Found journey for neighbour sending frame with arrival time "
            << arrival_time << endl;
       out_frame.time = arrival_time;
-      cout << out_frame.time << endl;
       string out_str = out_frame.to_string();
-      to.sin_port = htons(neighbour.first);
-      if (sendto(this_node.udp_socket, out_str.c_str(), out_str.size(), 0,
-                 (struct sockaddr *)&to, sizeof(to)) < 0) {
-        cerr << "Failed to send frame to neighbour" << endl;
-        this_node.quit(1);
-      }
+      this_node.send_udp(neighbour.first, out_str);
       cout << this_node.name << " sent frame " << out_str << " to "
            << neighbour.second << endl;
-      ++sent_frames;
+      sent_frames = sent_frames + 1;
     }
   }
+  cout << this_node.name << " has sent " << sent_frames << " frames" << endl;
+
   if (sent_frames == 0) {
     cout << "Sent 0 frames origin of frame is " << out_frame.origin << endl;
     if (out_frame.origin == this_node.name) {
@@ -200,26 +187,16 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
           {"Arrival time at destination: Couldn't get there",
            "Next leg of trip: None"});
       string http_response = http_string(200, "OK", http_strings);
-      if (send(out_socket, http_response.c_str(), http_response.size(), 0) <
-          0) {
-        cout << "Failed to send a browser rejection, exiting" << endl;
-        this_node.quit(1);
-      }
+      this_node.send_tcp(out_socket, http_response);
       this_node.remove_socket(out_socket);
     } else {
       // Sending a response to the guy who sent it to us
       Frame response_frame =
           Frame(out_frame.dest, out_frame.origin, out_frame.src,
                 out_frame.seqno, -1, RESPONSE);
-      uint16_t out_port = this_node.get_port_from_name(sender_name);
-      to.sin_port = htons(out_port);
+      out_port = this_node.get_port_from_name(sender_name);
       string response_str = response_frame.to_string();
-      if (sendto(this_node.udp_socket, response_str.c_str(),
-                 response_str.size(), 0, (struct sockaddr *)&to,
-                 sizeof(to)) < 0) {
-        cout << "Failed to send a frame, exiting" << endl;
-        this_node.quit(1);
-      }
+      this_node.send_udp(out_port, response_str);
     }
   } else {
     // We need to keep a track of the frames we sent out

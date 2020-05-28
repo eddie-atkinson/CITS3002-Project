@@ -24,3 +24,9 @@ string http_string(int response_code, string response_msg,
   ss << "</body></html>";
   return ss.str();
 }
+
+int current_time(void) {
+  time_t temp_time = time(NULL);
+  struct tm *temp_struct = localtime(&temp_time);
+  return ((temp_struct->tm_hour * 60) + temp_struct->tm_min);
+}
