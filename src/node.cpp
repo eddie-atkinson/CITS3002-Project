@@ -200,6 +200,9 @@ void Node::send_tcp(int fd, string &transmission) {
 Response *Node::find_response_obj(string &dest, int seqno, string &sender) {
   Response *resp_obj = NULL;
   for (auto &resp : outstanding_frames) {
+    if (resp.remaining_responses == 0) {
+      continue;
+    }
     bool token_match = resp.origin == dest && resp.seqno == seqno;
     if (token_match && (resp.sender == sender || dest == name)) {
       resp_obj = &resp;
@@ -217,7 +220,7 @@ void Node::remove_outstanding_frame(Response *resp_ptr) {
                  resp_ptr->seqno == iter->seqno &&
                  resp_ptr->sender == iter->sender;
     if (match) {
-      outstanding_frames.erase(iter);
+      iter = outstanding_frames.erase(iter);
       return;
     }
   }

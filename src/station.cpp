@@ -90,7 +90,7 @@ void listen_on_ports(Node &this_node) {
   while (true) {
     this_node.check_kill();
     FD_ZERO(&read_fds);
-    tv.tv_sec = 5;
+    tv.tv_sec = 10;
     tv.tv_usec = 0;
     fdsready = 0;
     largestfd = -1;

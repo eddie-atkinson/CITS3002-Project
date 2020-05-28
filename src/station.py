@@ -33,10 +33,14 @@ from Node import Node
 def main() -> None:
     this_node = parse_args()
     print(f"Node: {this_node.name} running with PID {os.getpid()}")
-    init_ports(this_node)
-    this_node.check_kill()
-    send_name_frames(this_node)
-    listen_on_ports(this_node)
+    try:
+        init_ports(this_node)
+        this_node.check_kill()
+        send_name_frames(this_node)
+        listen_on_ports(this_node)
+    except OSError:
+        print("Address most likely in use")
+        this_node.quit(1)
 
 
 def init_ports(this_node: Node) -> None:
@@ -71,7 +75,7 @@ def listen_on_ports(this_node: Node) -> None:
     this_node.input_sockets = [this_node.tcp_socket, this_node.udp_socket]
     while True:
         this_node.check_kill()
-        readers = select.select(this_node.input_sockets, [], [], 5.0)[0]
+        readers = select.select(this_node.input_sockets, [], [], 10.0)[0]
         for reader in readers:
             if reader is this_node.udp_socket:
                 # Do something

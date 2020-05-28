@@ -1,5 +1,6 @@
 import time
 import socket
+import sys
 from FrameType import FrameType
 from Node import Node
 from Frame import Frame
@@ -84,7 +85,18 @@ def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
                 response_frame.to_bytes(), (HOST, out_port)
             )
     else:
-        outstanding_response = Response(sent_frames, out_frame, -1, "")
+        if out_frame.origin == this_node.name:
+            sender = this_node.name
+        else:
+            sender = out_frame.src[-2] 
+        outstanding_response = Response(
+            sent_frames,
+            sender,
+            out_frame.origin,
+            out_frame.seqno,
+            -1,
+            "",
+        )
         this_node.outstanding_frames.append(outstanding_response)
 
 
@@ -137,13 +149,16 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
     # compare the time to the stored time and see if it needs changing, if so change the recorded node to be the unpeeled node
     # decrement the appropriate count variable and if the count variable is 0 check the node before you on the src chain and send the response to them
     src_node = in_frame.src.pop(-1)
+    # Remove ourself from frame
+    in_frame.src.pop(-1)
     response_obj = None
     for resp in this_node.outstanding_frames:
-        if (
-            resp.frame.dest == in_frame.origin
-            and resp.frame.seqno == in_frame.seqno
-            and resp.frame.src == in_frame.src
-        ):
+        match = (resp.origin == in_frame.dest and resp.seqno == in_frame.seqno)
+        if not in_frame.src:
+            match = match and in_frame.dest == this_node.name
+        else:
+            match = match and resp.sender == in_frame.src[-1]
+        if match:
             response_obj = resp
             break
 
@@ -152,6 +167,8 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
             f"{this_node.name} couldn't find response for frame "
             f"{in_frame.to_string()}"
         )
+        for resp in this_node.outstanding_frames:
+            print(resp, file=sys.stderr)
         this_node.quit(1)
 
     if response_obj.time == -1 and in_frame.time > 0:
@@ -187,18 +204,20 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
                 f"Next leg of trip: {itinerary}",
             ]
             http_response = http_string(200, "OK", http_lines)
-            out_socket = this_node.response_sockets[response_obj.frame.seqno]
+            out_socket = this_node.response_sockets[response_obj.seqno]
             out_socket.send(http_response.encode("utf-8"))
             this_node.input_sockets.remove(out_socket)
             out_socket.shutdown(socket.SHUT_RD)
             out_socket.close()
 
         else:
+            # We're sending the frame on so put ourselves back in the src
+            in_frame.src.append(this_node.name)
             response_frame = Frame(
-                origin=response_obj.frame.dest,
-                dest=response_obj.frame.origin,
+                origin=in_frame.origin,
+                dest=response_obj.origin,
                 src=in_frame.src,
-                seqno=response_obj.frame.seqno,
+                seqno=response_obj.seqno,
                 time=response_obj.time,
                 type=FrameType.RESPONSE,
             )
