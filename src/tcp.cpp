@@ -6,7 +6,6 @@ void handle_tcp(Node &this_node, string &message, int socket) {
   std::regex_search(message, match, reg_str);
   string destination = match.str();
   if (match.size() == 0) {
-    cout << this_node.name << " received bad request " << message << endl;
     list<string> msgs({"Ouch! bad request"});
     string response = http_string(400, "Bad request", msgs);
     this_node.send_tcp(socket, response);

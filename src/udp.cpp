@@ -12,35 +12,25 @@ void process_request_frame(Node &this_node, Frame &in_frame) {
   }
   if (in_frame.dest == this_node.name) {
     // You've got mail!
+    cout << this_node.name << " received a frame for itself, responding"
+         << endl;
     in_frame.src.push_back(this_node.name);
     Frame response_frame = Frame(this_node.name, in_frame.origin, in_frame.src,
                                  in_frame.seqno, in_frame.time, RESPONSE);
     string response_str = response_frame.to_string();
-    size_t len = response_str.size();
-    struct sockaddr_in to;
-    to.sin_family = AF_INET;
-    to.sin_port = htons(out_port);
-    inet_pton(AF_INET, HOST_IP, &(to.sin_addr));
+    this_node.send_udp(out_port, response_str);
 
-    sendto(this_node.udp_socket, response_str.c_str(), len, 0,
-           (struct sockaddr *)&to, sizeof(to));
   } else if (std::find(in_frame.src.begin(), in_frame.src.end(),
                        this_node.name) == in_frame.src.end()) {
     send_frame_to_neighbours(this_node, in_frame);
   } else {
     // We have a cycle
+    cout << this_node.name << " squashing cycle" << endl;
     in_frame.src.push_back(this_node.name);
     Frame response_frame = Frame(in_frame.dest, in_frame.origin, in_frame.src,
                                  in_frame.seqno, -1, RESPONSE);
     string response_str = response_frame.to_string();
-    size_t len = response_str.size();
-    struct sockaddr_in to;
-    to.sin_family = AF_INET;
-    to.sin_port = htons(out_port);
-    inet_pton(AF_INET, HOST_IP, &(to.sin_addr));
-
-    sendto(this_node.udp_socket, response_str.c_str(), len, 0,
-           (struct sockaddr *)&to, sizeof(to));
+    this_node.send_udp(out_port, response_str);
   }
 }
 
@@ -50,14 +40,19 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
   cout << "Number of response objects we have "
        << this_node.outstanding_frames.size() << endl;
   string src_node = in_frame.src.back();
+  in_frame.src.pop_back();
   // Take ourselves out of the src
   in_frame.src.pop_back();
   Response *resp_obj = NULL;
   list<class Response>::iterator resp;
   for (resp = this_node.outstanding_frames.begin();
        resp != this_node.outstanding_frames.end(); ++resp) {
-    if (resp->origin == in_frame.dest && resp->seqno == in_frame.seqno &&
-        resp->sender == in_frame.src.back()) {
+    cout << resp->to_string() << endl;
+    bool token_match =
+        resp->origin == in_frame.dest && resp->seqno == in_frame.seqno;
+
+    if (token_match && (resp->sender == in_frame.src.back() ||
+                        in_frame.dest == this_node.name)) {
       resp_obj = &(*resp);
       break;
     }
@@ -102,8 +97,6 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
         }
         int hours = resp_obj->time / 60;
         int minutes = resp_obj->time % 60;
-        cout << "Hours: " << hours << endl;
-        cout << "Minutes: " << minutes << endl;
         arrival_time << hours << ":";
         if (minutes < 10) {
           arrival_time << "0" << minutes;
@@ -111,7 +104,6 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
           arrival_time << minutes;
         }
         itinerary << next_journey;
-        cout << "Still here" << endl;
       }
       list<string> http_lines({arrival_time.str(), itinerary.str()});
       string http_response = http_string(200, "OK", http_lines);
@@ -146,7 +138,6 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   int start_time;
   if (out_frame.time == -1) {
     start_time = current_time();
-    cout << "Start time for " << this_node.name << " " << start_time << endl;
   } else {
     start_time = out_frame.time;
   }
@@ -155,10 +146,8 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   std::copy(out_frame.src.begin(), out_frame.src.end(),
             std::inserter(src_set, src_set.end()));
   for (auto neighbour : this_node.neighbours) {
-    cout << "Inside neighbours loop" << endl;
     if (src_set.find(neighbour.second) == src_set.end()) {
       // We haven't sent the frame here before
-      cout << "Looking for journey for " << neighbour.second << endl;
       int arrival_time =
           this_node.find_arrival_time(neighbour.second, start_time);
       if (arrival_time == -1) {
@@ -170,7 +159,8 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
       out_frame.time = arrival_time;
       string out_str = out_frame.to_string();
       this_node.send_udp(neighbour.first, out_str);
-      cout << this_node.name << " sent frame " << out_str << " to "
+      cout << endl
+           << this_node.name << " sent frame " << out_str << " to "
            << neighbour.second << endl;
       sent_frames = sent_frames + 1;
     }

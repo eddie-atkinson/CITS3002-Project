@@ -86,7 +86,6 @@ void Node::check_timetable(void) {
         continue;
       }
       Journey nxt_jrn = Journey(line);
-      cout << "Arrival time " << nxt_jrn.arrival_time << endl;
       if (timetables.find(nxt_jrn.destination) == timetables.end()) {
         timetables[nxt_jrn.destination] = list<class Journey>();
       }

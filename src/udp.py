@@ -3,7 +3,6 @@ import socket
 from FrameType import FrameType
 from Node import Node
 from Frame import Frame
-from timetable import calc_arrival_time
 from timetable import check_timetable
 from timetable import find_next_trip
 from Journey import Journey
