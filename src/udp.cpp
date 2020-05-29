@@ -58,7 +58,7 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
     resp_obj->time = in_frame.time;
     resp_obj->stop = src_node;
   }
-  --resp_obj->remaining_responses;
+  (resp_obj->remaining_responses) = (resp_obj->remaining_responses) - 1;
   if (resp_obj->remaining_responses == 0) {
     if (in_frame.dest == this_node.name) {
       cout << "End of the line, respond to TCP socket" << endl;
@@ -71,7 +71,8 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
         arrival_time << "couldn't get there";
         itinerary << "None";
       } else {
-        int start_time = current_time();
+        // int start_time = current_time();
+        int start_time = 500;
         string next_journey =
             this_node.find_itinerary(resp_obj->stop, start_time);
         if (next_journey.size() == 0) {
@@ -120,7 +121,8 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   out_frame.src.push_back(this_node.name);
   int start_time;
   if (out_frame.time == -1) {
-    start_time = current_time();
+    // start_time = current_time();
+    start_time = 500;
   } else {
     start_time = out_frame.time;
   }

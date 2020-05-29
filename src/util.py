@@ -19,4 +19,4 @@ def get_port_from_name(this_node: Node, node_name: str) -> int:
     for port, name in this_node.neighbours.items():
         if name == node_name:
             return port
-    raise KeyError(f"Couldn't find port number in neighbours for {node_name}")
+    raise KeyError(f"{this_node.name} couldn't find port number in neighbours for {node_name}")

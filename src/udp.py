@@ -37,6 +37,7 @@ def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
     if out_frame.time == -1:
         time_obj = time.localtime(int(time.time()))
         start_time = (time_obj.tm_hour * 60) + time_obj.tm_min
+        # start_time = 1100
     else:
         start_time = out_frame.time
     for port, name in this_node.neighbours.items():
@@ -47,9 +48,7 @@ def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
                 if journey is None:
                     continue
                 out_frame.time = journey.arrival_time
-                this_node.udp_socket.sendto(
-                    out_frame.to_bytes(), (HOST, port)
-                )
+                this_node.udp_socket.sendto(out_frame.to_bytes(), (HOST, port))
                 sent_frames += 1
             except KeyError:
                 print(
@@ -81,22 +80,12 @@ def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
                 type=FrameType.RESPONSE,
             )
             out_port = get_port_from_name(this_node, out_frame.src[-2])
-            this_node.udp_socket.sendto(
-                response_frame.to_bytes(), (HOST, out_port)
-            )
+            this_node.udp_socket.sendto(response_frame.to_bytes(), (HOST, out_port))
     else:
-        if out_frame.origin == this_node.name:
-            sender = this_node.name
-        else:
-            sender = out_frame.src[-2] 
         outstanding_response = Response(
-            sent_frames,
-            sender,
-            out_frame.origin,
-            out_frame.seqno,
-            -1,
-            "",
+            sent_frames, out_frame.src, out_frame.origin, out_frame.seqno, -1, "",
         )
+        print(f"{this_node.name} has forwarded {sent_frames} of frame {out_frame}")
         this_node.outstanding_frames.append(outstanding_response)
 
 
@@ -117,9 +106,7 @@ def process_request_frame(this_node: Node, in_frame: Frame) -> None:
             time=in_frame.time,
             type=FrameType.RESPONSE,
         )
-        this_node.udp_socket.sendto(
-            response_frame.to_bytes(), (HOST, out_port)
-        )
+        this_node.udp_socket.sendto(response_frame.to_bytes(), (HOST, out_port))
     elif this_node.name not in in_frame.src:
         send_frame_to_neighbours(this_node, in_frame)
     else:
@@ -133,9 +120,7 @@ def process_request_frame(this_node: Node, in_frame: Frame) -> None:
             time=-1,
             type=FrameType.RESPONSE,
         )
-        this_node.udp_socket.sendto(
-            response_frame.to_bytes(), (HOST, out_port)
-        )
+        this_node.udp_socket.sendto(response_frame.to_bytes(), (HOST, out_port))
     return
 
 
@@ -150,14 +135,12 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
     # decrement the appropriate count variable and if the count variable is 0 check the node before you on the src chain and send the response to them
     src_node = in_frame.src.pop(-1)
     # Remove ourself from frame
-    in_frame.src.pop(-1)
+    # in_frame.src.pop(-1)
     response_obj = None
     for resp in this_node.outstanding_frames:
-        match = (resp.origin == in_frame.dest and resp.seqno == in_frame.seqno)
-        if not in_frame.src:
-            match = match and in_frame.dest == this_node.name
-        else:
-            match = match and resp.sender == in_frame.src[-1]
+        match = resp.origin == in_frame.dest and resp.seqno == in_frame.seqno
+        match = match and resp.src == in_frame.src
+        
         if match:
             response_obj = resp
             break
@@ -179,8 +162,8 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
         # We've found a faster route
         response_obj.stop = src_node
         response_obj.time = in_frame.time
-
-    response_obj.remaining_responses -= 1
+    (response_obj.remaining_responses) = (response_obj.remaining_responses) - 1
+    print(f"{this_node.name} decrementing response count, current count is {response_obj.remaining_responses} for {response_obj.src}")
     if response_obj.remaining_responses == 0:
         if in_frame.dest == this_node.name:
             print(f"End of the line, let's respond to the TCP socket")
@@ -212,7 +195,7 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
 
         else:
             # We're sending the frame on so put ourselves back in the src
-            in_frame.src.append(this_node.name)
+            # in_frame.src.append(this_node.name)
             response_frame = Frame(
                 origin=in_frame.origin,
                 dest=response_obj.origin,
@@ -222,9 +205,7 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
                 type=FrameType.RESPONSE,
             )
             out_port = get_port_from_name(this_node, in_frame.src[-2])
-            this_node.udp_socket.sendto(
-                response_frame.to_bytes(), (HOST, out_port)
-            )
+            this_node.udp_socket.sendto(response_frame.to_bytes(), (HOST, out_port))
             print(
                 f"{this_node.name} responding to {in_frame.src[-2]} with {response_frame.to_string()}"
             )
