@@ -37,7 +37,6 @@ def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
     if out_frame.time == -1:
         time_obj = time.localtime(int(time.time()))
         start_time = (time_obj.tm_hour * 60) + time_obj.tm_min
-        # start_time = 1100
     else:
         start_time = out_frame.time
     for port, name in this_node.neighbours.items():
@@ -134,13 +133,11 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
     # compare the time to the stored time and see if it needs changing, if so change the recorded node to be the unpeeled node
     # decrement the appropriate count variable and if the count variable is 0 check the node before you on the src chain and send the response to them
     src_node = in_frame.src.pop(-1)
-    # Remove ourself from frame
-    # in_frame.src.pop(-1)
     response_obj = None
     for resp in this_node.outstanding_frames:
         match = resp.origin == in_frame.dest and resp.seqno == in_frame.seqno
         match = match and resp.src == in_frame.src
-        
+
         if match:
             response_obj = resp
             break
@@ -194,8 +191,6 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
             out_socket.close()
 
         else:
-            # We're sending the frame on so put ourselves back in the src
-            # in_frame.src.append(this_node.name)
             response_frame = Frame(
                 origin=in_frame.origin,
                 dest=response_obj.origin,
