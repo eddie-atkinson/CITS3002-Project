@@ -1,3 +1,8 @@
+/*
+Common header file.
+
+Defines global constants, includes libraries of general utility and sets namespaces. 
+*/
 #ifndef COMMON_H
 #define COMMON_H
 #include <errno.h>

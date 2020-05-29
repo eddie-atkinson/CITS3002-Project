@@ -1,3 +1,6 @@
+/*
+Defines the FrameType enum for use in Frame objects.
+*/
 #ifndef FRAMETYPE_H
 #define FRAMETYPE_H
 #include <iostream>

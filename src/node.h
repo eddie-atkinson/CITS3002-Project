@@ -19,6 +19,26 @@
 #include <time.h>
 #include <unistd.h>
 
+/*
+Class for storing the essential information and data structures necessary for the functioning
+of a node in the network.
+
+Attributes:
+  name: the node's name as string
+  udp_port: the UDP port the node uses for communication with other nodes
+  tcp_port: the TCP port the node uses for communication with the browser
+  neighbours: a map containing a node's neighbours UDP ports mapped
+  to their names
+  udp_socket: file descriptor of the UDP socket used by the node
+  tcp_socket: file descriptor of the TCP socket used by the node
+  response_sockets: map of frame sequence numbers to TCP socket file descriptors to respond to
+  outstanding_frames: a list of Response objects for frames that require a response
+  seqno: the current sequence number
+  timetables: a map of neighbouring node names to a list of Journey objects
+  input_sockets: a list of socket objects that are listened on
+  last_timetable_check: the last time the node's timetable file was parsed
+  packet_count: count of the number of packets forwarded by a node
+*/
 class Node {
 public:
   string name;
@@ -34,8 +54,9 @@ public:
   map<string, list<class Journey>> timetables;
   time_t last_timetable_check;
   int packet_count;
-  // Public methods
+  // Constructor
   Node();
+  // Public methods
   void check_timetable();
   void check_kill();
   void quit(int status);

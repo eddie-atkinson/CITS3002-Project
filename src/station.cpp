@@ -1,5 +1,22 @@
+/*
+Starting point for the execution of the C++ implementation of the server for CITS3002
+
+Author: Eddie Atkinson (22487668)
+
+Parses the command line arguments, initialises a node and then enters its select loop. 
+*/
 #include "station.h"
 
+/* 
+Parses the command line arguments passed to the program and uses them to construct
+a Node object.
+
+Arguments:
+  argc: arugment count
+  argv: array of pointers to strings representing arguments
+Returns:
+  Node object representing the current station
+*/
 Node parse_args(int argc, char *argv[]) {
   Node this_node = Node();
   this_node.name = argv[1];
@@ -13,6 +30,15 @@ Node parse_args(int argc, char *argv[]) {
   return this_node;
 }
 
+/*
+Sends name frames to neighbours
+
+Arguments:
+  this_node: node object representing current node
+
+Returns:
+  void
+*/
 void send_name_frames(Node &this_node) {
   list<string> new_src;
   Frame name_frame = Frame(this_node.name, "", new_src, -1, -1, NAME_FRAME);
@@ -34,6 +60,17 @@ void send_name_frames(Node &this_node) {
   return;
 }
 
+/*
+Reads from sockets and passes the output to the appropriate functions if select has
+file descriptors for reading.
+
+Arguments:
+  this_node: Node object representing a given station in the network
+  fd_set: the set of file descriptors being watched by select with the appropriate
+  read flags set if a file descriptor is ready to read.
+Returns:
+  void
+*/
 void handle_sockets(Node &this_node, fd_set *rfds) {
   char buf[MAX_PACKET_LEN];
   size_t len = MAX_PACKET_LEN;
@@ -82,6 +119,14 @@ void handle_sockets(Node &this_node, fd_set *rfds) {
   }
 }
 
+/*
+Enters the select loop and processes the outputs of the sockets
+
+Arguments:
+  this_node: Node object representing a node in the network
+Returns:
+  void
+*/
 void listen_on_ports(Node &this_node) {
   struct timeval tv;
   fd_set read_fds;
@@ -115,6 +160,10 @@ void listen_on_ports(Node &this_node) {
   }
 }
 
+/* 
+Starting point for the program, parses command line args, initialises node
+and starts the select loop.
+*/
 int main(int argc, char *argv[]) {
   if (argc <= 2) {
     cout << "Server needs arguments to work" << endl;

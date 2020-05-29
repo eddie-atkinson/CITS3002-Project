@@ -1,11 +1,36 @@
+/*
+Implementation of the Frame class
+*/
 #include "frame.h"
+/*
+Constructor for Frame. 
+
+Arguments:
+  origin: the name of the node where the frame originated
+  dest: the name of the destination node of the frame
+  src: a list of strings containing the names of the nodes the frame has passed through in order
+  seqno: the sequence number applied to the frame by the original sender
+  time: the time, in minutes after midnight that the previous sender can arrive at the recipient
+  type: Enum for frametype
+*/
 Frame::Frame(string origin, string dest, list<string> &src, int seqno, int time,
              FrameType type)
     : origin(origin), dest(dest), src(src), seqno(seqno), time(time),
       type(type) {}
 
+/*
+No args constructor for Frame
+*/
 Frame::Frame() {}
 
+/*
+Utility method to convert a Frame object to a string for easy printing
+
+Arguments:
+  None
+Returns:
+  String representation of the frame
+*/
 string Frame::to_string() {
   ostringstream src_string;
   ostringstream main_string;
@@ -24,6 +49,19 @@ string Frame::to_string() {
               << "type:" << type;
   return main_string.str();
 }
+
+/*
+Method for initialising a Frame object from a string representation.
+
+Used to initialise a Frame object from a string that has arrived over the network.
+Iterates through the string breaking it up into tokens, and then erasing the tokens from the string.
+The src is first ingested as a string and then broken up into a list.
+
+Arguments:
+  in_str: A string representation of a frame
+Returns:
+  void
+*/
 
 void Frame::from_string(string &in_str) {
   map<string, string> tokens;

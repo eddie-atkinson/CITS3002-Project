@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -std=c++11 -Wall -pedantic -Werror
-OBJ = station.o node.o udp.o tcp.o frame.o journey.o util.o response.o
+OBJ = node.o udp.o tcp.o frame.o journey.o util.o response.o station.o
 RM = rm -f
 
 %.o: %.cpp %.h

@@ -1,3 +1,5 @@
+"""Module containing constants relied upon by the program
+"""
 # Keep the seqnos bounded to 32 bits for our C friends
 MAX_INT = 4294967295  # 2^32 -1
 MAX_PACKET_LEN = 1024

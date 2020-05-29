@@ -23,10 +23,10 @@ class Node:
         to their names
         udp_socket: socket object representing the UDP socket used by the node
         tcp_socket: socket object representing the TCP socket used by the node
-        response_sockets: dictionary frame sequence numbers to sockets to respond to
+        response_sockets: dictionary mapping frame sequence numbers to TCP sockets
         outstanding_frames: a list of Response objects for frames that require a response
         seqno: the current sequence number
-        timetables: a dictionary of neighbour node names to a list of Journey objects
+        timetables: a dictionary of neighbouring node names to a list of Journey objects
         input_sockets: a list of socket objects that are listened on
         last_timetable_check: the last time the node's timetable file was parsed
         packet_count: count of the number of packets forwarded by a node

@@ -1,4 +1,21 @@
+/*
+Utility functions for handling UDP packets across the network.
+*/
 #include "udp.h"
+
+/*
+Processes request frames.
+
+Request frames are either responded to immediately if they are destined for the
+current node, forwarded to neighbours if they haven't been seen before, or negatively
+responded to if they have been seen before.
+
+Arguments:
+  this_node: Node object representing a station on the network
+  in_frame: Frame object representing inbound frame
+Returns: 
+  void
+*/
 void process_request_frame(Node &this_node, Frame &in_frame) {
   cout << this_node.name << " received request " << in_frame.to_string()
        << endl;
@@ -34,6 +51,21 @@ void process_request_frame(Node &this_node, Frame &in_frame) {
   }
 }
 
+/*
+Processes response frames.
+
+Searches through the list of response objects a node has stored to find the 
+frame the response frame pertains to, adjusts its fastest time if a faster route
+has been found, and decrements its count of responses remaining. If no more responses
+are expected a response frame is sent to the sender, or if the sender was the current
+node a response is sent to the browser.
+
+Arguments:
+  this_node: Node object representing a station on the network
+  in_frame: Frame object representing inbound frame
+Returns: 
+  void
+*/
 void process_response_frame(Node &this_node, Frame &in_frame) {
   cout << this_node.name << " received response " << in_frame.to_string()
        << " from " << in_frame.src.back() << endl;
@@ -115,6 +147,20 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
   }
 }
 
+/*
+Forwards a frame to a node's neighbours if they haven't seen it before.
+
+Determines whether a neighbour has seen a frame before by checking if they
+are in its src string, if they are not then the frame is forwarded to them.
+If all of a node's neighbours have seen the frame before, a response is immediately
+provided to the sender, whether it be another node or the browser client.
+
+Args:
+  this_node: instance of the node class representing a given node in the network.
+  out_frame: Frame object representing the frame to be forwarded.
+Returns:
+  void
+*/
 void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   int sent_frames = 0;
   uint16_t out_port;
@@ -183,6 +229,18 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   }
 }
 
+/*
+Processes incoming UDP packets.
+
+Handles UDP packets by either forwarding them to a node's neighbours, responding
+directly to the sender, or responding to the browser.
+
+Args:
+  this_node: instance of the node class representing a given node in the network.
+  transmission: tuple containing the bytes of a UDP packet and origin port
+Returns:
+  None
+*/
 void process_udp(Node &this_node, string &transmission, uint16_t port) {
   Frame in_frame = Frame();
   in_frame.from_string(transmission);

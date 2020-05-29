@@ -1,5 +1,22 @@
+/*
+Utility functions for handling TCP packets from the browser
+*/
 #include "tcp.h"
 
+/*
+Processes incoming TCP packets.
+
+Parses packets using regex to check if they are valid requests, if they are
+sends a requests to neighbours, elsewise it terminates the TCP connection with 
+an appropriate message. 
+
+Arguments:
+  this_node: Node object representing station in the network
+  message: the TCP packet transmitted by the browser
+  socket: file descriptor of the socket that transmitted the request
+Returns:
+  void
+*/
 void handle_tcp(Node &this_node, string &message, int socket) {
   std::regex reg_str("to=\\w+");
   std::smatch match;

@@ -1,5 +1,16 @@
+/*
+Implementation of the Journey class
+*/
 #include "journey.h"
 
+/*
+Constructor for the Journey class.
+
+Ingests a line from a timetable to initialise a Journey object. Splits the line
+into a list of strings delimited by commas and then parses the string representations
+of the arrival and departure times into minutes after midnight. 
+
+*/
 Journey::Journey(const string &in_str) : string_rep(in_str) {
   string temp_str = string_rep;
   list<string> tokens = split(temp_str, ',');
@@ -24,15 +35,14 @@ Journey::Journey(const string &in_str) : string_rep(in_str) {
   destination = tokens.front();
   tokens.pop_front();
 }
+/*
+Method for returning string representation of Journey object for debug printing.
 
-// No args constructor for indicating error state
-Journey::Journey() {
-  string_rep = "";
-  destination = "Nowhere";
-  departure_time = -1;
-  arrival_time = -1;
-}
-
+Arguments:
+  void
+Returns:
+  string representation of the Journey object.
+*/
 string Journey::to_string() const {
   ostringstream ss;
   ss << "String representation: " << string_rep << endl
