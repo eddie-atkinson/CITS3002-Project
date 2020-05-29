@@ -143,6 +143,7 @@ uint16_t Node::get_port_from_name(string &node_name) {
       return neighbour.first;
     }
   }
+  cout << "Couldn't find port for neighbour " << node_name << endl;
   return -1;
 }
 
@@ -197,14 +198,11 @@ void Node::send_tcp(int fd, string &transmission) {
   }
 }
 
-Response *Node::find_response_obj(string &dest, int seqno, string &sender) {
+Response *Node::find_response_obj(string &dest, int seqno, list<string> &in_src) {
   Response *resp_obj = NULL;
   for (auto &resp : outstanding_frames) {
-    if (resp.remaining_responses == 0) {
-      continue;
-    }
     bool token_match = resp.origin == dest && resp.seqno == seqno;
-    if (token_match && (resp.sender == sender || dest == name)) {
+    if (token_match && resp.src == in_src) {
       resp_obj = &resp;
       break;
     }
@@ -218,7 +216,7 @@ void Node::remove_outstanding_frame(Response *resp_ptr) {
        ++iter) {
     bool match = resp_ptr->origin == iter->origin &&
                  resp_ptr->seqno == iter->seqno &&
-                 resp_ptr->sender == iter->sender;
+                 resp_ptr->src == iter->src;
     if (match) {
       iter = outstanding_frames.erase(iter);
       return;

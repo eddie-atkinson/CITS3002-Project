@@ -41,9 +41,10 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
   string src_node = in_frame.src.back();
   in_frame.src.pop_back();
   // Take ourselves out of the src
-  in_frame.src.pop_back();
+  // in_frame.src.pop_back();
+  cout << this_node.name << " frame " << in_frame.to_string() << endl; 
   Response *resp_obj = this_node.find_response_obj(
-      in_frame.dest, in_frame.seqno, in_frame.src.back());
+      in_frame.dest, in_frame.seqno, in_frame.src);
   if (resp_obj == NULL) {
     cout << "Couldn't find response object for frame " << in_frame.to_string()
          << endl;
@@ -58,8 +59,10 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
     resp_obj->time = in_frame.time;
     resp_obj->stop = src_node;
   }
+  cout << this_node.name << " remaining responses for " << in_frame.to_string() << endl << resp_obj->remaining_responses << endl;
   (resp_obj->remaining_responses) = (resp_obj->remaining_responses) - 1;
-  if (resp_obj->remaining_responses == 0) {
+  cout << this_node.name << " remaining responses for " << in_frame.to_string() << endl << resp_obj->remaining_responses << endl; 
+  if ((resp_obj->remaining_responses) == 0) {
     if (in_frame.dest == this_node.name) {
       cout << "End of the line, respond to TCP socket" << endl;
       ostringstream arrival_time;
@@ -71,8 +74,8 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
         arrival_time << "couldn't get there";
         itinerary << "None";
       } else {
-        // int start_time = current_time();
-        int start_time = 500;
+        int start_time = current_time();
+        // int start_time = 500;
         string next_journey =
             this_node.find_itinerary(resp_obj->stop, start_time);
         if (next_journey.size() == 0) {
@@ -95,17 +98,20 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
       this_node.send_tcp(out_socket, http_response);
       this_node.remove_socket(out_socket);
     } else {
+      // Find out who sent the frame to us and then add ourselves back in
+      in_frame.src.pop_back();
       uint16_t out_port = this_node.get_port_from_name(in_frame.src.back());
-      // We're sending the frame on so put ourselves back in the src
       in_frame.src.push_back(this_node.name);
+      
       Frame response_frame =
           Frame(in_frame.origin, resp_obj->origin, in_frame.src,
                 resp_obj->seqno, resp_obj->time, RESPONSE);
       string response_str = response_frame.to_string();
+      cout << this_node.name << " sending response frame " << response_str << " to " << out_port << endl;
       this_node.send_udp(out_port, response_str);
     }
     // Remove response object from outstanding_frame
-    this_node.remove_outstanding_frame(resp_obj);
+    // this_node.remove_outstanding_frame(resp_obj);
   }
 }
 
@@ -121,8 +127,8 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   out_frame.src.push_back(this_node.name);
   int start_time;
   if (out_frame.time == -1) {
-    // start_time = current_time();
-    start_time = 500;
+    start_time = current_time();
+    // start_time = 500;
   } else {
     start_time = out_frame.time;
   }
@@ -171,7 +177,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
   } else {
     // We need to keep a track of the frames we sent out
     Response outstanding_response =
-        Response(sent_frames, sender_name, out_frame.origin, out_frame.seqno);
+        Response(sent_frames, out_frame.src, out_frame.origin, out_frame.seqno);
     this_node.outstanding_frames.push_back(outstanding_response);
   }
 }

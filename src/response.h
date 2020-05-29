@@ -8,12 +8,12 @@
 class Response {
 public:
   int remaining_responses;
-  string sender;
+  list<string> src;
   string origin;
   int seqno;
   int time;
   string stop;
-  Response(int remaining_responses, string &sender, string &origin, int seqno);
+  Response(int remaining_responses, list<string>& src, string &origin, int seqno);
   string to_string();
 };
 #endif
