@@ -1,5 +1,9 @@
 #!/usr/bin/python3
-import random
+"""Simple script for replacing every second line of startstations.sh script
+with python servers.
+
+Probably wouldn't have been better implemented in bash, but I hate it.
+"""
 
 with open("startstations.sh", "r") as in_file:
     lines = in_file.readlines()

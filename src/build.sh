@@ -1,3 +1,4 @@
+# Simple build script to get everything rocking and rolling
 rm killfile
 killall ./station
 sleep 5
@@ -5,7 +6,7 @@ sleep 5
 ./makeform.sh startstations.sh myform.html 
 make clean 
 make -j 4 
-./station_randomiser.py
+#./station_randomiser.py
 ./startstations.sh &&
 sleep 5
 if test -f "killfile"; then

@@ -1,6 +1,10 @@
+"""Module responsible for handling UDP communication for a node.
+
+Processes the UDP packets received by a node and forwards them to neighbours, responds,
+or sends final responses to TCP clients.
+"""
 import time
 import socket
-import sys
 from FrameType import FrameType
 from Node import Node
 from Frame import Frame
@@ -11,11 +15,20 @@ from constants import HOST
 from util import get_port_from_name
 from util import http_string
 from Response import Response
-from FrameType import FrameType
-import sys
 
 
 def process_udp(this_node: Node, transmission: tuple) -> None:
+    """Processes incoming UDP packets.
+
+    Handles UDP packets by either forwarding them to a node's neighbours, responding
+    directly to the sender, or responding to the browser.
+
+    Args:
+        this_node: instance of the node class representing a given node in the network.
+        transmission: tuple containing the bytes of a UDP packet and origin port
+    Returns:
+        None
+    """
     origin_port = transmission[1][1]
     frame_str = transmission[0].decode("utf-8")
     frame_obj = Frame()
@@ -31,6 +44,19 @@ def process_udp(this_node: Node, transmission: tuple) -> None:
 
 
 def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
+    """Forwards a frame to a node's neighbours if they haven't seen it before.
+
+    Determines whether a neighbour has seen a frame before by checking if they
+    are in its src string, if they are not then the frame is forwarded to them.
+    If all of a node's neighbours have seen the frame before, a response is immediately
+    provided to the sender, whether it be another node or the browser client.
+
+    Args:
+        this_node: instance of the node class representing a given node in the network.
+        out_frame: Frame object representing the frame to be forwarded.
+    Returns:
+        None
+    """
     # Add this node to src and push to all neighbours not currently in src
     sent_frames = 0
     out_frame.src.append(this_node.name)
@@ -45,6 +71,7 @@ def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
                 timetable = this_node.timetables[name]
                 journey = find_next_trip(timetable, start_time)
                 if journey is None:
+                    # Don't forward the frame if we can't get to the neighbour
                     continue
                 out_frame.time = journey.arrival_time
                 this_node.udp_socket.sendto(out_frame.to_bytes(), (HOST, port))
@@ -56,7 +83,7 @@ def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
 
     if sent_frames == 0:
         if out_frame.origin == this_node.name:
-            # We can't get anywhere
+            # We can't get anywhere, respond to browser
             out_socket = this_node.response_sockets[out_frame.seqno]
             http_lines = [
                 f"Arrival time at destination: Couldn't get there",
@@ -79,21 +106,32 @@ def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
                 type=FrameType.RESPONSE,
             )
             out_port = get_port_from_name(this_node, out_frame.src[-2])
-            this_node.packet_count += 1
             this_node.udp_socket.sendto(response_frame.to_bytes(), (HOST, out_port))
     else:
         outstanding_response = Response(
             sent_frames, out_frame.src, out_frame.origin, out_frame.seqno, -1, "",
         )
-        print(f"{this_node.name} has forwarded {sent_frames} of frame {out_frame}")
+        this_node.packet_count += sent_frames
         this_node.outstanding_frames.append(outstanding_response)
 
 
+
 def process_request_frame(this_node: Node, in_frame: Frame) -> None:
-    print(
-        f"{this_node.name} received request {in_frame.to_string()} from"
-        f"{in_frame.src[-1]}"
-    )
+    """Processes request frames.
+
+    If a frame is received that is destined for the current node, a response is
+    sent immediately, if the the request is not destined for the current node and
+    it hasn't passed through the current node before it is forwarded to the node's
+    neighbours, and if it has passed through the current node before a negative
+    response is sent to the sender to squash the cycle. 
+
+    Args:
+        this_node: instance of the node class representing a given node in the network.
+        in_frame: Frame object representing the request frame to be processed.
+    Returns:
+        None
+    """
+    print(f"{this_node.name} received request {in_frame.to_string()} from" f"{in_frame.src[-1]}")
     out_port = get_port_from_name(this_node, in_frame.src[-1])
     if in_frame.dest == this_node.name:
         in_frame.src.append(this_node.name)
@@ -121,35 +159,35 @@ def process_request_frame(this_node: Node, in_frame: Frame) -> None:
             type=FrameType.RESPONSE,
         )
         this_node.udp_socket.sendto(response_frame.to_bytes(), (HOST, out_port))
-    return
 
 
 def process_response_frame(this_node: Node, in_frame: Frame) -> None:
-    print(
-        f"{this_node.name} received response {in_frame.to_string()} from"
-        f"{in_frame.src[-1]}"
-    )
-    # unpeel the last node in the src and store it as the next node in the journey
-    # compare the seqno, origin and src chain for the frame to see which response object it belongs to
-    # compare the time to the stored time and see if it needs changing, if so change the recorded node to be the unpeeled node
-    # decrement the appropriate count variable and if the count variable is 0 check the node before you on the src chain and send the response to them
+    """Processes response frames.
+
+    Searches through the list of response objects a node has stored to find the 
+    frame the response frame pertains to, adjusts its fastest time if a faster route
+    has been found, and decrements its count of responses remaining. If no more responses
+    are expected a response frame is sent to the sender, or if the sender was the current
+    node a response is sent to the browser.
+
+     Args:
+        this_node: instance of the node class representing a given node in the network.
+        in_frame: Frame object representing the response frame to be processed.
+    Returns:
+        None
+
+    """
+    print(f"{this_node.name} received response {in_frame.to_string()} from" f"{in_frame.src[-1]}")
     src_node = in_frame.src.pop(-1)
     response_obj = None
     for resp in this_node.outstanding_frames:
-        match = resp.origin == in_frame.dest and resp.seqno == in_frame.seqno
-        match = match and resp.src == in_frame.src
-
+        match = resp.origin == in_frame.dest and resp.seqno == in_frame.seqno and resp.src == in_frame.src
         if match:
             response_obj = resp
             break
 
     if response_obj is None:
-        print(
-            f"{this_node.name} couldn't find response for frame "
-            f"{in_frame.to_string()}"
-        )
-        for resp in this_node.outstanding_frames:
-            print(resp, file=sys.stderr)
+        print(f"{this_node.name} couldn't find response for frame " f"{in_frame.to_string()}")
         this_node.quit(1)
 
     if response_obj.time == -1 and in_frame.time > 0:
@@ -161,7 +199,6 @@ def process_response_frame(this_node: Node, in_frame: Frame) -> None:
         response_obj.stop = src_node
         response_obj.time = in_frame.time
     (response_obj.remaining_responses) = (response_obj.remaining_responses) - 1
-    print(f"{this_node.name} decrementing response count, current count is {response_obj.remaining_responses} for {response_obj.src}")
     if response_obj.remaining_responses == 0:
         if in_frame.dest == this_node.name:
             print(f"End of the line, let's respond to the TCP socket")

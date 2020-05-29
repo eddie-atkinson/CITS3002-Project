@@ -1,36 +1,41 @@
-#!/usr/bin/python3
-"""
+#!/usr/bin/env python3
+
+"""Implementation of the Python server for the CITS3002 project.
+
 Author: Eddie Atkinson (22487668)
 Date: 06/05/2020
 
-CITS3002 project Python implementation of the required functionality for a
-station.
+This module contains the main function for the program and is responsible for parsing the
+command line arguments passed to it, initialising a node object,
+opening the appropriate TCP and UDP ports, sending name frames to its
+neighbours, and finally entering the select loop that is used to process
+requests
 
-Code conforming to Pylinter and Mypy
+Typical usage example:
+./station.py <station-name> <tcp-port> <udp-port> <neighbour-1-udp-port> ...
+
+Code linted using mypy
 """
 import socket
 import sys
 import os
 import select
-import signal
-import time
-from typing import Any
-from typing import Tuple
 from time import sleep
-import regex as re
 from Frame import Frame
 from FrameType import FrameType
-from Journey import Journey
-from constants import MAX_INT
 from constants import HOST
 from constants import MAX_PACKET_LEN
-from Response import Response
 from udp import process_udp
 from tcp import process_tcp
 from Node import Node
 
 
 def main() -> None:
+    """Starting point for the program
+
+    Parses the command line args, initialises a node object representing this station,
+    sends name frames to neighbours and then enters the select loop
+    """
     this_node = parse_args()
     print(f"Node: {this_node.name} running with PID {os.getpid()}")
     try:
@@ -44,7 +49,14 @@ def main() -> None:
 
 
 def init_ports(this_node: Node) -> None:
+    """Initialises the UDP and TCP ports for an node.
 
+    Args:
+        this_node: An instance of the node class representing a given node in the network.
+
+    Returns:
+        None
+    """
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_socket.bind((HOST, this_node.tcp_port))
     tcp_socket.listen(5)
@@ -63,15 +75,26 @@ def init_ports(this_node: Node) -> None:
 
 
 def send_name_frames(this_node: Node) -> None:
-    name_frame = Frame(
-        this_node.name, "", [this_node.name], -1, -1, FrameType.NAME_FRAME
-    )
+    """Constructs a frame containing a node's name and send it to its neighbours.
+
+    Args:
+        this_node: An instance of the node class representing a given node in the network.
+    Returns:
+        None
+    """
+    name_frame = Frame(this_node.name, "", [this_node.name], -1, -1, FrameType.NAME_FRAME)
     for port in this_node.neighbours.keys():
         this_node.udp_socket.sendto(name_frame.to_bytes(), (HOST, port))
 
 
 def listen_on_ports(this_node: Node) -> None:
+    """Starts the node's select loop, handling both UDP and TCP packets.
 
+    Args:
+        this_node: An instance of the node class representing a given node in the network.
+    Returns:
+        None
+    """
     this_node.input_sockets = [this_node.tcp_socket, this_node.udp_socket]
     while True:
         this_node.check_kill()
@@ -99,6 +122,14 @@ def listen_on_ports(this_node: Node) -> None:
 
 
 def parse_args() -> Node:
+    """Parses the arguments passed to the program and returns an initialised node object.
+
+    Args:
+        None
+    Returns:
+        An instance of the Node class containing a node's name, TCP port, UDP port,
+        and the UDP ports of its neighbours.
+    """
     args = list(sys.argv)
     # Don't really care about the program name
     args.pop(0)
@@ -116,11 +147,5 @@ def parse_args() -> Node:
     return this_node
 
 
-def exit_gracefully(sig, frame) -> None:
-    print("Interrupt: exiting gracefully")
-    sys.exit(0)
-
-
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, exit_gracefully)
     main()
