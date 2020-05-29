@@ -111,7 +111,7 @@ void process_response_frame(Node &this_node, Frame &in_frame) {
       this_node.send_udp(out_port, response_str);
     }
     // Remove response object from outstanding_frame
-    // this_node.remove_outstanding_frame(resp_obj);
+    this_node.remove_outstanding_frame(resp_obj);
   }
 }
 
@@ -152,6 +152,7 @@ void send_frame_to_neighbours(Node &this_node, Frame &out_frame) {
            << this_node.name << " sent frame " << out_str << " to "
            << neighbour.second << endl;
       sent_frames = sent_frames + 1;
+      ++this_node.packet_count;
     }
   }
   if (sent_frames == 0) {

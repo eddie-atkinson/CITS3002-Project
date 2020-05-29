@@ -33,6 +33,7 @@ public:
   vector<int> input_sockets;
   map<string, list<class Journey>> timetables;
   time_t last_timetable_check;
+  int packet_count;
   // Public methods
   Node();
   void check_timetable();

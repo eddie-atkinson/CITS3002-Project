@@ -3,6 +3,7 @@
 Node::Node(void) {
   seqno = 0;
   last_timetable_check = -1;
+  packet_count = 0;
   outstanding_frames = list<class Response>();
 }
 
@@ -83,6 +84,7 @@ void Node::quit(int status) {
     FILE *fp = fopen(KILL_FILE, "w");
     fclose(fp);
   }
+  cout << "Packets forwarded by " << name << " is " << packet_count << endl; 
   for (auto socket : input_sockets) {
     shutdown(socket, SHUT_RD);
     close(socket);

@@ -78,7 +78,6 @@ def listen_on_ports(this_node: Node) -> None:
         readers = select.select(this_node.input_sockets, [], [], 10.0)[0]
         for reader in readers:
             if reader is this_node.udp_socket:
-                # Do something
                 transmission = reader.recvfrom(MAX_PACKET_LEN)
                 process_udp(this_node, transmission)
             elif reader is this_node.tcp_socket:

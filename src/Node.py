@@ -20,6 +20,7 @@ class Node:
     timetables: dict = {}
     input_sockets: list = []
     last_timetable_check = -1
+    packet_count: int = 0
 
     def __init__(self, name, neighbours, tcp_port, udp_port):
         self.name = name
@@ -45,6 +46,7 @@ class Node:
                 f"{ANSI_COLOR_GREEN} {self.name} exiting gracefully {ANSI_COLOR_RESET}",
                 file=sys.stderr,
             )
+            print(f"{self.name} forwarded {self.packet_count} packets")
             for sock in self.input_sockets:
                 sock.close()
         sys.exit(status)

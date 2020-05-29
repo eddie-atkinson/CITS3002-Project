@@ -79,6 +79,7 @@ def send_frame_to_neighbours(this_node: Node, out_frame: Frame) -> None:
                 type=FrameType.RESPONSE,
             )
             out_port = get_port_from_name(this_node, out_frame.src[-2])
+            this_node.packet_count += 1
             this_node.udp_socket.sendto(response_frame.to_bytes(), (HOST, out_port))
     else:
         outstanding_response = Response(
